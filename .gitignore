@@ -426,3 +426,6 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Permitir modelos 3D (no son archivos objeto de C++)
+!ProyectoFinal/Modelos/*.obj
