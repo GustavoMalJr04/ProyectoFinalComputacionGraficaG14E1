@@ -1,2 +1,8 @@
-# Blender 5.2.3 LTS MTL File: 'ParedesPatio.blend'
-# www.blender.org
+# barda - editado a mano para OpenGL (Phong)
+newmtl default
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0300 0.0300 0.0300
+	Ns 8.0000
+	d 1.0000
+	illum 2
+	map_Kd ../Texturas/Muro_Aplanado.jpg
