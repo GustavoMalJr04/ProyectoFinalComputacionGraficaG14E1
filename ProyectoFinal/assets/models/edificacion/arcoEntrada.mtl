@@ -1,2 +1,7 @@
-# Blender 5.2.3 LTS MTL File: 'arcoEntrada.blend'
-# www.blender.org
+newmtl muroCementerio
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ns 10.0000
+	d 1.0000
+	illum 2
+	map_Kd Muro_Aplanado.jpg
