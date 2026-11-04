@@ -172,14 +172,15 @@ int main()
 	//models
 	Model skeleton((char*)"assets/models/skeleton/skeleton.obj");
 	Model craneo((char*)"assets/models/skeleton/craneo.obj");
-
-	Model pisoAdoquin((char*)"assets/models/edificacion/Piso_Adoquin.obj");
+	
 	Model arcoEntrada((char*)"assets/models/edificacion/arcoEntrada.obj");
+	//Model atrio1((char*)"assets/models/edificacion/atrio1.obj");
 	Model corredor((char*)"assets/models/edificacion/corredor.obj");
+	//Model cruzPanteon((char*)"assets/models/edificacion/cruzPanteon.obj");
 	Model murosCementerio((char*)"assets/models/edificacion/murosCementerio.obj");
 	Model paredesPatio((char*)"assets/models/edificacion/ParedesPatio.obj");
+	Model pisoAdoquin((char*)"assets/models/edificacion/Piso_Adoquin.obj");
 	Model pisoCementerio((char*)"assets/models/edificacion/pisoCementerio.obj");
-
 
 	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
