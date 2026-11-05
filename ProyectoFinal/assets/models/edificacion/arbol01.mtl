@@ -8,8 +8,8 @@ Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 1
-map_Kd C:/branch-01.png
-map_d C:/branch-01.png
+map_Kd ../../textures/branch-01.png
+map_d ../../textures/branch-01.png
 
 newmtl branch-1-02
 Ns 250.000000
@@ -18,8 +18,8 @@ Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 1
-map_Kd C:/branch-02.png
-map_d C:/branch-02.png
+map_Kd ../../textures/branch-02.png
+map_d ../../textures/branch-02.png
 
 newmtl trunk-01
 Ns 431.410095
@@ -29,4 +29,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd C:/bark.jpg
+map_Kd ../../textures/bark.jpg
