@@ -191,6 +191,7 @@ int main()
 	Model portonDerecha((char*)"assets/models/edificacion/porton_hoja_der.obj");
 	Model portonIzquierda((char*)"assets/models/edificacion/porton_hoja_izq.obj");
 	Model portonMarco((char*)"assets/models/edificacion/porton_marco.obj");
+	Model altar((char*)"assets/models/edificacion/altar.obj");
 
 	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
@@ -305,131 +306,138 @@ int main()
 		glm::mat4 model(1);
 
 		// 1. Reinicializas la matriz a la identidad
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		arcoEntrada.Draw(lightingShader);
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 10.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//arcoEntrada.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//atrio1.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//corredor.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//cruzMadera1.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//cruzMadera2.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//cruzPanteon.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//farol1.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(10.0f, 1.0f, -20.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//iglesia.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//lapida1.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//murosCementerio.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//paredesPatio.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//petaloCempasuchil.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//pisoAdoquin.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//pisoCementerio.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//pisoTierra.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//portonDerecha.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//portonIzquierda.Draw(lightingShader);
+		//
+		//model = glm::mat4(1.0f);
+		////model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
+		//portonMarco.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
 		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		atrio1.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		corredor.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		cruzMadera1.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		cruzMadera2.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		cruzPanteon.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		farol1.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		iglesia.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		lapida1.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		murosCementerio.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		paredesPatio.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		petaloCempasuchil.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		pisoAdoquin.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		pisoCementerio.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		pisoTierra.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		portonDerecha.Draw(lightingShader);
-
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		portonIzquierda.Draw(lightingShader);
-		
-		model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
-		portonMarco.Draw(lightingShader);
+		altar.Draw(lightingShader);
 
 		//model = glm::mat4(1.0f);
 		//model = glm::translate(model, glm::vec3(1.5f, 0.0f, 0.0f));
