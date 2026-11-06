@@ -125,9 +125,19 @@ public:
 		return this->position;
 	}
 
+	void SetPosition(glm::vec3 newPosition)
+	{
+		this->position = newPosition;
+	}
+
 	glm::vec3 GetFront()
 	{
 		return this->front;
+	}
+
+	glm::vec3 GetRight()
+	{
+		return this->right;
 	}
 
 private:
