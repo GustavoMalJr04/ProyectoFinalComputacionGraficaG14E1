@@ -1,52 +1,45 @@
-# Blender 5.2.3 LTS MTL File: 'None'
-# www.blender.org
+# iglesia.mtl
+newmtl iglesia_muro
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0200 0.0200 0.0200
+	Ns 8.0000
+	d 1.0000
+	illum 2
+	map_Kd ../Texturas/muro_iglesia.jpg
 
-newmtl Cantera
-Ns 4.999998
-Ka 1.000000 1.000000 1.000000
-Kd 0.620000 0.500000 0.440000
-Ks 0.020000 0.020000 0.020000
-Ke 0.000000 0.000000 0.000000
-Ni 1.500000
-d 1.000000
-illum 2
+newmtl iglesia_cantera
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0500 0.0500 0.0500
+	Ns 10.0000
+	d 1.0000
+	illum 2
+	map_Kd ../Texturas/cantera.jpg
 
-newmtl Cupula
-Ns 4.999998
-Ka 1.000000 1.000000 1.000000
-Kd 0.800000 0.420000 0.220000
-Ks 0.020000 0.020000 0.020000
-Ke 0.000000 0.000000 0.000000
-Ni 1.500000
-d 1.000000
-illum 2
+newmtl iglesia_teja
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ns 16.0000
+	d 1.0000
+	illum 2
+	map_Kd ../Texturas/teja_cupula.jpg
 
-newmtl Hierro
-Ns 4.999998
-Ka 1.000000 1.000000 1.000000
-Kd 0.080000 0.080000 0.080000
-Ks 0.020000 0.020000 0.020000
-Ke 0.000000 0.000000 0.000000
-Ni 1.500000
-d 1.000000
-illum 2
+newmtl iglesia_madera
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0500 0.0500 0.0500
+	Ns 10.0000
+	d 1.0000
+	illum 2
+	map_Kd ../Texturas/madera_iglesia.jpg
 
-newmtl Muro
-Ns 4.999998
-Ka 1.000000 1.000000 1.000000
-Kd 0.860000 0.760000 0.580000
-Ks 0.020000 0.020000 0.020000
-Ke 0.000000 0.000000 0.000000
-Ni 1.500000
-d 1.000000
-illum 2
-
-newmtl Oscuro
-Ns 4.999998
-Ka 1.000000 1.000000 1.000000
-Kd 0.160000 0.120000 0.100000
-Ks 0.020000 0.020000 0.020000
-Ke 0.000000 0.000000 0.000000
-Ni 1.500000
-d 1.000000
-illum 2
+newmtl iglesia_campana
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.6000 0.6000 0.6000
+	Ns 64.0000
+	d 1.0000
+	illum 2
+	map_Kd ../Texturas/iglesia_campanas.jpg

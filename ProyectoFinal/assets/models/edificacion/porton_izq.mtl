@@ -1,0 +1,9 @@
+# porton_izq.mtl
+newmtl Hierro
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.3000 0.3000 0.3000
+	Ns 32.0000
+	d 1.0000
+	illum 2
+	map_Kd ../Texturas/metal_porton.jpg
