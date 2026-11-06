@@ -6,4 +6,4 @@ newmtl lapida
 	Ns 8.0000
 	d 1.0000
 	illum 2
-	map_Kd ../Texturas/lapida_piedra.jpg
+   	map_Kd ../../textures/lapida_piedra.jpg

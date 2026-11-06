@@ -8,8 +8,8 @@ Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 1
-map_Kd ../../textures/branch-01.png
-map_d ../../textures/branch-01.png
+   map_Kd ../../textures/branch-01.png
+   map_d ../../textures/branch-01.png
 
 newmtl branch-1-02
 Ns 250.000000
@@ -18,5 +18,5 @@ Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 1
-map_Kd ../../textures/branch-02.png
-map_d ../../textures/branch-02.png
+   map_Kd ../../textures/branch-02.png
+   map_d ../../textures/branch-02.png

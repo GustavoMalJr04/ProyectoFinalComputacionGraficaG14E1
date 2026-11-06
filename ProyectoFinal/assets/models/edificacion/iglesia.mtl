@@ -6,7 +6,7 @@ newmtl iglesia_muro
 	Ns 8.0000
 	d 1.0000
 	illum 2
-	map_Kd ../Texturas/muro_iglesia.jpg
+   	map_Kd ../../textures/muro_iglesia.jpg
 
 newmtl iglesia_cantera
 	Ka 1.0000 1.0000 1.0000
@@ -15,7 +15,7 @@ newmtl iglesia_cantera
 	Ns 10.0000
 	d 1.0000
 	illum 2
-	map_Kd ../Texturas/cantera.jpg
+   	map_Kd ../../textures/cantera.jpg
 
 newmtl iglesia_teja
 	Ka 1.0000 1.0000 1.0000
@@ -24,7 +24,7 @@ newmtl iglesia_teja
 	Ns 16.0000
 	d 1.0000
 	illum 2
-	map_Kd ../Texturas/teja_cupula.jpg
+   	map_Kd ../../textures/teja_cupula.jpg
 
 newmtl iglesia_madera
 	Ka 1.0000 1.0000 1.0000
@@ -33,7 +33,7 @@ newmtl iglesia_madera
 	Ns 10.0000
 	d 1.0000
 	illum 2
-	map_Kd ../Texturas/madera_iglesia.jpg
+   	map_Kd ../../textures/madera_iglesia.jpg
 
 newmtl iglesia_campana
 	Ka 1.0000 1.0000 1.0000
@@ -42,4 +42,4 @@ newmtl iglesia_campana
 	Ns 64.0000
 	d 1.0000
 	illum 2
-	map_Kd ../Texturas/iglesia_campanas.jpg
+   	map_Kd ../../textures/iglesia_campanas.jpg

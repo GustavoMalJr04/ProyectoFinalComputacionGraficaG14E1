@@ -14,4 +14,4 @@ newmtl Madera
 	Ni 1.5000
 	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd C:\Users\Hana_\OneDrive\Escritorio\Proyecto Compu\Texturas\madera_iglesia.jpg
+   	map_Kd ../../textures/madera_iglesia.jpg

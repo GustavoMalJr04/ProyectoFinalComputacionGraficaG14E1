@@ -6,4 +6,4 @@ newmtl Hierro
 	Ns 32.0000
 	d 1.0000
 	illum 2
-	map_Kd ../Texturas/metal_porton.jpg
+   	map_Kd ../../textures/metal_porton.jpg
