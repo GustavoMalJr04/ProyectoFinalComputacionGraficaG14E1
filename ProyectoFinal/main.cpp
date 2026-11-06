@@ -170,28 +170,27 @@ int main()
 	Model piernaDer((char*)"assets/models/skeleton/piernaDer.obj");
 	Model piernaIzq((char*)"assets/models/skeleton/piernaIzq.obj");
 
-	Model arcoEntrada((char*)"assets/models/edificacion/arcoEntrada.obj");
-	Model atrio1((char*)"assets/models/edificacion/atrio1.obj");
-	Model corredor((char*)"assets/models/edificacion/corredor.obj");
-	Model cruzMadera1((char*)"assets/models/edificacion/cruzMadera1.obj");
-	Model cruzMadera2((char*)"assets/models/edificacion/cruzMadera2.obj");
-	Model cruzPanteon((char*)"assets/models/edificacion/cruzPanteon.obj");
+	// ---------------- Edificacion (nombres nuevos) ----------------
+	Model arcoEntrada((char*)"assets/models/edificacion/atrio_arco_entrada.obj");
+	Model corredor((char*)"assets/models/edificacion/corredor_panteon.obj");
+	Model cruzMadera1((char*)"assets/models/edificacion/cruz_pequena.obj");
+	Model cruzMadera2((char*)"assets/models/edificacion/cruz_diminuta.obj");
+	Model cruzPanteon((char*)"assets/models/edificacion/cruz_panteon.obj");
 	Model farol1((char*)"assets/models/edificacion/farol1.obj");
 	Model iglesia((char*)"assets/models/edificacion/iglesia.obj");
-	Model lapida1((char*)"assets/models/edificacion/Lapida1.obj");
-	Model murosCementerio((char*)"assets/models/edificacion/murosCementerio.obj");
-	Model paredesPatio((char*)"assets/models/edificacion/ParedesPatio.obj");
+	Model lapida1((char*)"assets/models/edificacion/lapida.obj");
+	Model murosCementerio((char*)"assets/models/edificacion/barda_panteon.obj");
+	Model paredesPatio((char*)"assets/models/edificacion/atrio_barda.obj");
 	Model petaloCempasuchil((char*)"assets/models/edificacion/petaloCempasuchil.obj");
-	Model pisoAdoquin((char*)"assets/models/edificacion/Piso_Adoquin.obj");
-	Model pisoCementerio((char*)"assets/models/edificacion/pisoCementerio.obj");
-	Model pisoTierra((char*)"assets/models/edificacion/pisoTierra.obj");
-	Model portonDerecha((char*)"assets/models/edificacion/porton_hoja_der.obj");
-	Model portonIzquierda((char*)"assets/models/edificacion/porton_hoja_izq.obj");
+	Model pisoAdoquin((char*)"assets/models/edificacion/atrio_explanada.obj");
+	Model pisoCementerio((char*)"assets/models/edificacion/piso_panteon.obj");
+	Model portonDerecha((char*)"assets/models/edificacion/porton_der.obj");
+	Model portonIzquierda((char*)"assets/models/edificacion/porton_izq.obj");
 	Model portonMarco((char*)"assets/models/edificacion/porton_marco.obj");
 	Model altar((char*)"assets/models/edificacion/altar.obj");
 	Model papelPicadoAltar((char*)"assets/models/edificacion/papelPicadoAltar.obj");
 	Model avenida((char*)"assets/models/edificacion/avenida.obj");
-
+	
 	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
 	glGenVertexArrays(1, &VAO);
@@ -336,6 +335,20 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		avenida.Draw(lightingShader);
+
+		//dibujar panteon 
+		model = glm::mat4(1.0f);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		pisoCementerio.Draw(lightingShader);
+		portonMarco.Draw(lightingShader);
+		portonDerecha.Draw(lightingShader);
+		portonIzquierda.Draw(lightingShader);
+		cruzPanteon.Draw(lightingShader);
+		cruzMadera1.Draw(lightingShader);
+		cruzMadera2.Draw(lightingShader);
+		lapida1.Draw(lightingShader);
+		farol1.Draw(lightingShader);
 
 		// Dibujar la estructura del altar (Sólida)
 		model = glm::mat4(1.0f);
