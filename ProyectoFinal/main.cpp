@@ -1,4 +1,4 @@
-ï»¿#include <iostream>
+#include <iostream>
 #include <cmath>
 
 // GLEW
@@ -23,7 +23,6 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "Model.h"
-#include "MariposaKeyframes.h"   // Mariposa monarca animada por cuadros clave
 
 // Function prototypes
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -97,7 +96,8 @@ float vertices[] = {
 	   -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 };
 
-
+// Posición base del esqueleto en el mundo
+glm::vec3 skeletonPos(1.5f, 0.0f, 0.0f);
 
 glm::vec3 Light1 = glm::vec3(0);
 //Anim
@@ -114,25 +114,14 @@ glm::vec3 dogPos(0.0f, 0.0f, 0.0f);
 float dogRot = 0.0f;
 bool step = false;
 
-
-
 // Deltatime
-GLfloat deltaTime = 0.0f;	// Time between current frame and last frame
-GLfloat lastFrame = 0.0f;  	// Time of last frame
-
-// Mariposa monarca (puntero para usarla desde KeyCallback)
-MariposaKeyframes* punteroMariposa = nullptr;
+GLfloat deltaTime = 0.0f;
+GLfloat lastFrame = 0.0f;
 
 int main()
 {
 	// Init GLFW
 	glfwInit();
-	// Set all the required options for GLFW
-	/*glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);*/
 
 	// Create a GLFWwindow object that we can use for GLFW's functions
 	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto Dia de Muertos", nullptr, nullptr);
@@ -141,87 +130,67 @@ int main()
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
-
 		return EXIT_FAILURE;
 	}
 
 	glfwMakeContextCurrent(window);
-
 	glfwGetFramebufferSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
 
 	// Set the required callback functions
 	glfwSetKeyCallback(window, KeyCallback);
 	glfwSetCursorPosCallback(window, MouseCallback);
 
-	// GLFW Options
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
 	// Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
 	glewExperimental = GL_TRUE;
-	// Initialize GLEW to setup the OpenGL Function pointers
 	if (GLEW_OK != glewInit())
 	{
 		std::cout << "Failed to initialize GLEW" << std::endl;
 		return EXIT_FAILURE;
 	}
 
-	// Define the viewport dimensions
 	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-
 
 	Shader lightingShader("Shader/lighting.vs", "Shader/lighting.frag");
 	Shader lampShader("Shader/lamp.vs", "Shader/lamp.frag");
 
-	//models
+	// Modelos
 	Model skeleton((char*)"assets/models/skeleton/skeleton.obj");
 	Model craneo((char*)"assets/models/skeleton/craneo.obj");
+	Model antebrazoDer((char*)"assets/models/skeleton/antebrazoDer.obj");
+	Model antebrazoIzq((char*)"assets/models/skeleton/antebrazoIzq.obj");
+	Model brazoDer((char*)"assets/models/skeleton/brazoDer.obj");
+	Model brazoIzq((char*)"assets/models/skeleton/brazoIzq.obj");
+	Model femurDer((char*)"assets/models/skeleton/femurDer.obj");
+	Model femurIzq((char*)"assets/models/skeleton/femurIzq.obj");
+	Model manoDer((char*)"assets/models/skeleton/manoDer.obj");
+	Model manoIzq((char*)"assets/models/skeleton/manoIzq.obj");
+	Model pecho((char*)"assets/models/skeleton/pecho.obj");
+	Model pieDer((char*)"assets/models/skeleton/pieDer.obj");
+	Model pieIzq((char*)"assets/models/skeleton/pieIzq.obj");
+	Model piernaDer((char*)"assets/models/skeleton/piernaDer.obj");
+	Model piernaIzq((char*)"assets/models/skeleton/piernaIzq.obj");
 
-	// ---------------- Edificacion (nombres nuevos, ver Excel de renombrado) ----------------
-	Model atrioArcoEntrada((char*)"assets/models/edificacion/atrio_arco_entrada.obj");
-	Model atrioBarda((char*)"assets/models/edificacion/atrio_barda.obj");          // antes ParedesPatio
-	Model atrioExplanada((char*)"assets/models/edificacion/atrio_explanada.obj");  // antes Piso_Adoquin
-	Model bardaPanteon((char*)"assets/models/edificacion/barda_panteon.obj");      // antes murosCementerio
-	Model corredorPanteon((char*)"assets/models/edificacion/corredor_panteon.obj");
-	Model pisoPanteon((char*)"assets/models/edificacion/piso_panteon.obj");        // antes pisoCementerio
-	Model portonMarco((char*)"assets/models/edificacion/porton_marco.obj");
-	Model portonDerecha((char*)"assets/models/edificacion/porton_der.obj");
-	Model portonIzquierda((char*)"assets/models/edificacion/porton_izq.obj");
-	Model cruzDiminuta((char*)"assets/models/edificacion/cruz_diminuta.obj");      // antes cruzMadera2
-	Model cruzPequena((char*)"assets/models/edificacion/cruz_pequena.obj");        // antes cruzMadera1 (renombrar sin Ã±)
-	Model cruzPanteon((char*)"assets/models/edificacion/cruz_panteon.obj");
+	Model arcoEntrada((char*)"assets/models/edificacion/arcoEntrada.obj");
+	Model atrio1((char*)"assets/models/edificacion/atrio1.obj");
+	Model corredor((char*)"assets/models/edificacion/corredor.obj");
+	Model cruzMadera1((char*)"assets/models/edificacion/cruzMadera1.obj");
+	Model cruzMadera2((char*)"assets/models/edificacion/cruzMadera2.obj");
+	Model cruzPanteon((char*)"assets/models/edificacion/cruzPanteon.obj");
 	Model farol1((char*)"assets/models/edificacion/farol1.obj");
 	Model iglesia((char*)"assets/models/edificacion/iglesia.obj");
-	Model lapida((char*)"assets/models/edificacion/lapida.obj");
+	Model lapida1((char*)"assets/models/edificacion/Lapida1.obj");
+	Model murosCementerio((char*)"assets/models/edificacion/murosCementerio.obj");
+	Model paredesPatio((char*)"assets/models/edificacion/ParedesPatio.obj");
 	Model petaloCempasuchil((char*)"assets/models/edificacion/petaloCempasuchil.obj");
+	Model pisoAdoquin((char*)"assets/models/edificacion/Piso_Adoquin.obj");
+	Model pisoCementerio((char*)"assets/models/edificacion/pisoCementerio.obj");
+	Model pisoTierra((char*)"assets/models/edificacion/pisoTierra.obj");
+	Model portonDerecha((char*)"assets/models/edificacion/porton_hoja_der.obj");
+	Model portonIzquierda((char*)"assets/models/edificacion/porton_hoja_izq.obj");
+	Model portonMarco((char*)"assets/models/edificacion/porton_marco.obj");
 	Model altar((char*)"assets/models/edificacion/altar.obj");
-	// atrio1 y pisoTierra se quitaron: estaban repetidos
-
-	// ---------------- Mariposa monarca ----------------
-	Model modeloCuerpoMariposa((char*)"assets/models/mariposa/cuerpo.obj");
-	Model modeloAlaIzquierda((char*)"assets/models/mariposa/ala_izq.obj");
-	Model modeloAlaDerecha((char*)"assets/models/mariposa/ala_der.obj");
-
-	MariposaKeyframes mariposa(&modeloCuerpoMariposa, &modeloAlaIzquierda, &modeloAlaDerecha);
-	punteroMariposa = &mariposa;
-
-	mariposa.escala = 0.10f;   // unos 40 cm de punta a punta
-	mariposa.pasosEntreCuadros = 120;     // 2 segundos entre cuadros clave
-	mariposa.pasosEntreAleteos = 5;       // unos 6 aleteos por segundo
-	mariposa.ConfigurarAleteo(-15.0f, 75.0f);
-
-	// Vuelta de 1.5 m de radio alrededor del altar, que estÃ¡ en el origen (0, 0, 0)
-	//                           posX    posY    posZ    giroY   inclinacionX
-	mariposa.AgregarCuadroClave(1.50f, 1.10f, 0.00f, 180.0f, 10.0f);   // cuadro 0
-	mariposa.AgregarCuadroClave(1.06f, 1.40f, 1.06f, 135.0f, 0.0f);   // cuadro 1
-	mariposa.AgregarCuadroClave(0.00f, 1.20f, 1.50f, 90.0f, -10.0f);   // cuadro 2
-	mariposa.AgregarCuadroClave(-1.06f, 0.90f, 1.06f, 45.0f, 0.0f);   // cuadro 3
-	mariposa.AgregarCuadroClave(-1.50f, 1.10f, 0.00f, 0.0f, 10.0f);   // cuadro 4
-	mariposa.AgregarCuadroClave(-1.06f, 1.50f, -1.06f, -45.0f, 0.0f);   // cuadro 5
-	mariposa.AgregarCuadroClave(0.00f, 1.30f, -1.50f, -90.0f, -10.0f);   // cuadro 6
-	mariposa.AgregarCuadroClave(1.06f, 1.00f, -1.06f, -135.0f, 0.0f);   // cuadro 7
-
-	mariposa.ReproducirODetener();        // que empiece volando
+	Model papelPicadoAltar((char*)"assets/models/edificacion/papelPicadoAltar.obj");
+	Model avenida((char*)"assets/models/edificacion/avenida.obj");
 
 	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
@@ -247,41 +216,33 @@ int main()
 	// Game loop
 	while (!glfwWindowShouldClose(window))
 	{
-
 		// Calculate deltatime of current frame
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		// Avanza la animaciÃ³n de la mariposa (vuelo + aleteo)
-		mariposa.Actualizar(deltaTime);
-
-		// Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
 		glfwPollEvents();
 		DoMovement();
 		Animation();
+
+		// Sincronizar la cámara con la posición del esqueleto
+		camera.SetPosition(skeletonPos + glm::vec3(0.0f, 2.0f, -0.5f));
 
 		// Clear the colorbuffer
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// OpenGL options
 		glEnable(GL_DEPTH_TEST);
 
+		glm::mat4 modelTemp = glm::mat4(1.0f);
 
-		glm::mat4 modelTemp = glm::mat4(1.0f); //Temp
-
-
-
-		// Use cooresponding shader when setting uniforms/drawing objects
+		// Use corresponding shader when setting uniforms/drawing objects
 		lightingShader.Use();
 
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "diffuse"), 0);
-		//glUniform1i(glGetUniformLocation(lightingShader.Program, "specular"),1);
 
 		GLint viewPosLoc = glGetUniformLocation(lightingShader.Program, "viewPos");
 		glUniform3f(viewPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
-
 
 		// Directional light
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.direction"), -0.2f, -1.0f, -0.3f);
@@ -289,13 +250,11 @@ int main()
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.diffuse"), 0.6f, 0.6f, 0.6f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.specular"), 0.3f, 0.3f, 0.3f);
 
-
 		// Point light 1
 		glm::vec3 lightColor;
 		lightColor.x = abs(sin(glfwGetTime() * Light1.x));
 		lightColor.y = abs(sin(glfwGetTime() * Light1.y));
 		lightColor.z = sin(glfwGetTime() * Light1.z);
-
 
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].position"), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].ambient"), lightColor.x, lightColor.y, lightColor.z);
@@ -304,7 +263,6 @@ int main()
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].constant"), 1.0f);
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].linear"), 0.045f);
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].quadratic"), 0.075f);
-
 
 		// SpotLight
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.position"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
@@ -318,233 +276,232 @@ int main()
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.cutOff"), glm::cos(glm::radians(12.0f)));
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.outerCutOff"), glm::cos(glm::radians(18.0f)));
 
-
-		// Set material properties
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "material.shininess"), 5.0f);
 
 		// Create camera transformations
-		glm::mat4 view;
-		view = camera.GetViewMatrix();
+		glm::mat4 view = camera.GetViewMatrix();
 
-		// Get the uniform locations
 		GLint modelLoc = glGetUniformLocation(lightingShader.Program, "model");
 		GLint viewLoc = glGetUniformLocation(lightingShader.Program, "view");
 		GLint projLoc = glGetUniformLocation(lightingShader.Program, "projection");
 
-		// Pass the matrices to the shader
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+		glm::mat4 model(1.0f);
 
-		glm::mat4 model(1);
+		// Dibujar Entorno / Edificaciones
+		model = glm::mat4(1.0f);
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		model = glm::translate(model, glm::vec3(-20.0f, -0.25f, 50.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		arcoEntrada.Draw(lightingShader);
 
-		// Dibuja un modelo opaco con su posicion y escala
-		auto dibujar = [&](Model& m, glm::vec3 pos = glm::vec3(0.0f), glm::vec3 esc = glm::vec3(1.0f))
-			{
-				glm::mat4 mod = glm::mat4(1.0f);
-				mod = glm::translate(mod, pos);
-				mod = glm::scale(mod, esc);
-				glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(mod));
-				glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
-				m.Draw(lightingShader);
-			};
+		model = glm::mat4(1.0f);
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		model = glm::translate(model, glm::vec3(12.5f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		corredor.Draw(lightingShader);
 
-		// Los modelos revisados ya vienen colocados desde 3ds Max (1 unidad = 1 m),
-		// por eso van en el origen con escala 1. Ajusten aqui si alguno sale movido.
-		dibujar(atrioExplanada);
-		dibujar(atrioBarda);
-		dibujar(atrioArcoEntrada);
-		dibujar(iglesia);
-		dibujar(corredorPanteon);
-		dibujar(pisoPanteon);
-		dibujar(bardaPanteon);
-		dibujar(portonMarco);
-		dibujar(portonDerecha);
-		dibujar(portonIzquierda);
-		dibujar(cruzPanteon);
-		dibujar(cruzPequena);
-		dibujar(cruzDiminuta);
-		dibujar(lapida);
-		dibujar(farol1);
-		dibujar(petaloCempasuchil);
-		dibujar(altar, glm::vec3(0.0f), glm::vec3(0.5f));
+		model = glm::mat4(1.0f);
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		model = glm::translate(model, glm::vec3(-20.0f, 0.0f, -30.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		iglesia.Draw(lightingShader);
 
-		// Mariposa monarca (despuÃ©s de los objetos opacos)
-		mariposa.Dibujar(lightingShader);
+		model = glm::mat4(1.0f);
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		murosCementerio.Draw(lightingShader);
 
-		//model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(1.5f, 0.0f, 0.0f));
+		model = glm::mat4(1.0f);
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		paredesPatio.Draw(lightingShader);
 
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
-		//skeleton.Draw(lightingShader);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-20.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		pisoAdoquin.Draw(lightingShader);
 
-		////Carga de modelo 
-		//view = camera.GetViewMatrix();
-		//model = glm::mat4(1);
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//Piso.Draw(lightingShader);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -0.25f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		avenida.Draw(lightingShader);
 
-		//model = glm::mat4(1);
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
-		////Body
-		//modelTemp = model = glm::translate(model, dogPos);
-		//modelTemp = model = glm::rotate(model, glm::radians(dogRot), glm::vec3(0.0f, 1.0f, 0.0f));
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//DogBody.Draw(lightingShader);
-		////Head
-		//model = modelTemp;
-		//model = glm::translate(model, glm::vec3(0.0f, 0.093f, 0.208f));
-		//model = glm::rotate(model, glm::radians(head), glm::vec3(0.0f, 0.0f, 1.0f));
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//HeadDog.Draw(lightingShader);
-		////Tail 
-		//model = modelTemp;
-		//model = glm::translate(model, glm::vec3(0.0f, 0.026f, -0.288f));
-		//model = glm::rotate(model, glm::radians(tail), glm::vec3(0.0f, 0.0f, -1.0f));
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//DogTail.Draw(lightingShader);
-		////Front Left Leg
-		//model = modelTemp;
-		//model = glm::translate(model, glm::vec3(0.112f, -0.044f, 0.074f));
-		//model = glm::rotate(model, glm::radians(FLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//F_LeftLeg.Draw(lightingShader);
-		////Front Right Leg
-		//model = modelTemp;
-		//model = glm::translate(model, glm::vec3(-0.111f, -0.055f, 0.074f));
-		//model = glm::rotate(model, glm::radians(FLegs), glm::vec3(1.0f, 0.0f, 0.0f));
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//F_RightLeg.Draw(lightingShader);
-		////Back Left Leg
-		//model = modelTemp;
-		//model = glm::translate(model, glm::vec3(0.082f, -0.046, -0.218));
-		//model = glm::rotate(model, glm::radians(RLegs), glm::vec3(1.0f, 0.0f, 0.0f));
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//B_LeftLeg.Draw(lightingShader);
-		////Back Right Leg
-		//model = modelTemp;
-		//model = glm::translate(model, glm::vec3(-0.083f, -0.057f, -0.231f));
-		//model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//B_RightLeg.Draw(lightingShader);
+		// Dibujar la estructura del altar (Sólida)
+		model = glm::mat4(1.0f);
+		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		altar.Draw(lightingShader);
 
+		// Dibujar el papel picado (Con transparencia y blending)
+		model = glm::mat4(1.0f);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
+		papelPicadoAltar.Draw(lightingShader);
+		glDisable(GL_BLEND);
+		glBindVertexArray(0);
 
-		//model = glm::mat4(1);
-		//glEnable(GL_BLEND);//Avtiva la funcionalidad para trabajar el canal alfa
-		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
-		//model = glm::rotate(model, glm::radians(rotBall), glm::vec3(0.0f, 1.0f, 0.0f));
-		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		//Ball.Draw(lightingShader);
-		//glDisable(GL_BLEND);  //Desactiva el canal alfa 
-		//glBindVertexArray(0);
+		// Dibujar el Esqueleto usando su posición global `skeletonPos`
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, skeletonPos);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 
+		modelTemp = model = glm::rotate(model, glm::radians(dogRot), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		pecho.Draw(lightingShader);
 
-		// Also draw the lamp object, again binding the appropriate shader
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(head), glm::vec3(0.0f, 0.0f, 1.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		craneo.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(tail), glm::vec3(0.0f, 0.0f, -1.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		antebrazoDer.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(FLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		antebrazoIzq.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(FLegs), glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		brazoDer.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		brazoIzq.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		femurDer.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		femurIzq.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		manoDer.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		manoIzq.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		pieDer.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		pieIzq.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		piernaDer.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		piernaIzq.Draw(lightingShader);
+
+		model = modelTemp;
+		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		skeleton.Draw(lightingShader);
+
+		// Lamp object
 		lampShader.Use();
-		// Get location objects for the matrices on the lamp shader (these could be different on a different shader)
 		modelLoc = glGetUniformLocation(lampShader.Program, "model");
 		viewLoc = glGetUniformLocation(lampShader.Program, "view");
 		projLoc = glGetUniformLocation(lampShader.Program, "projection");
 
-		// Set matrices
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-		model = glm::mat4(1);
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		// Draw the light object (using light's vertex attributes)
 
-		model = glm::mat4(1);
+		model = glm::mat4(1.0f);
 		model = glm::translate(model, pointLightPositions[0]);
-		model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
+		model = glm::scale(model, glm::vec3(0.2f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-
 		glBindVertexArray(0);
 
-
-
-		// Swap the screen buffers
 		glfwSwapBuffers(window);
 	}
 
-
-	// Terminate GLFW, clearing any resources allocated by GLFW.
 	glfwTerminate();
-
-
-
 	return 0;
 }
 
-// Moves/alters the camera positions based on user input
 void DoMovement()
 {
+	// Velocidad de movimiento del esqueleto
+	GLfloat cameraSpeed = 5.0f * deltaTime;
 
-	// Camera controls
+	// Obtenemos la dirección frontal plana (para que no vuele al mirar hacia arriba/abajo)
+	glm::vec3 front = camera.GetFront();
+	front.y = 0.0f;
+	front = glm::normalize(front);
+
+	glm::vec3 right = camera.GetRight();
+	right.y = 0.0f;
+	right = glm::normalize(right);
+
+	// Movimiento hacia adelante / atrás (W / S o Flechas)
 	if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP])
 	{
-		camera.ProcessKeyboard(FORWARD, deltaTime);
-
+		skeletonPos += front * cameraSpeed;
 	}
-
 	if (keys[GLFW_KEY_S] || keys[GLFW_KEY_DOWN])
 	{
-		camera.ProcessKeyboard(BACKWARD, deltaTime);
-
-
+		skeletonPos -= front * cameraSpeed;
 	}
 
+	// Movimiento lateral (A / D o Flechas Izquierda / Derecha)
 	if (keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT])
 	{
-		camera.ProcessKeyboard(LEFT, deltaTime);
-
-
+		skeletonPos -= right * cameraSpeed;
 	}
-
 	if (keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT])
 	{
-		camera.ProcessKeyboard(RIGHT, deltaTime);
-
-
+		skeletonPos += right * cameraSpeed;
 	}
 
-	if (keys[GLFW_KEY_T])
-	{
-		pointLightPositions[0].x += 0.01f;
-	}
-	if (keys[GLFW_KEY_G])
-	{
-		pointLightPositions[0].x -= 0.01f;
-	}
-
-	if (keys[GLFW_KEY_Y])
-	{
-		pointLightPositions[0].y += 0.01f;
-	}
-
-	if (keys[GLFW_KEY_H])
-	{
-		pointLightPositions[0].y -= 0.01f;
-	}
-	if (keys[GLFW_KEY_U])
-	{
-		pointLightPositions[0].z -= 0.1f;
-	}
-	if (keys[GLFW_KEY_J])
-	{
-		pointLightPositions[0].z += 0.01f;
-	}
-
+	// Control manual de las luces con T, G, Y, H, U, J (lo conservamos tal cual)
+	if (keys[GLFW_KEY_T]) { pointLightPositions[0].x += 0.01f; }
+	if (keys[GLFW_KEY_G]) { pointLightPositions[0].x -= 0.01f; }
+	if (keys[GLFW_KEY_Y]) { pointLightPositions[0].y += 0.01f; }
+	if (keys[GLFW_KEY_H]) { pointLightPositions[0].y -= 0.01f; }
+	if (keys[GLFW_KEY_U]) { pointLightPositions[0].z -= 0.1f; }
+	if (keys[GLFW_KEY_J]) { pointLightPositions[0].z += 0.01f; }
 }
 
-// Is called whenever a key is pressed/released via GLFW
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	if (GLFW_KEY_ESCAPE == key && GLFW_PRESS == action)
@@ -570,56 +527,41 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 		if (active)
 		{
 			Light1 = glm::vec3(0.2f, 0.8f, 1.0f);
-
 		}
 		else
 		{
-			Light1 = glm::vec3(0);//Cuado es solo un valor en los 3 vectores pueden dejar solo una componente
+			Light1 = glm::vec3(0);
 		}
 	}
 	if (keys[GLFW_KEY_N])
 	{
 		AnimBall = !AnimBall;
-
 	}
 	if (keys[GLFW_KEY_B])
 	{
 		dogAnim = 1;
-
 	}
-
-	// ---------------- Mariposa monarca ----------------
-	// L = reproducir/detener, K = guardar cuadro clave frente a la cÃ¡mara,
-	// O = borrar cuadros clave, P = imprimir cuadros clave en consola
-	if (punteroMariposa != nullptr && action == GLFW_PRESS)
-	{
-		if (key == GLFW_KEY_L) punteroMariposa->ReproducirODetener();
-		if (key == GLFW_KEY_K) punteroMariposa->GuardarCuadroDesdeCamara(camera.GetPosition(), camera.GetFront());
-		if (key == GLFW_KEY_O) punteroMariposa->BorrarCuadrosClave();
-		if (key == GLFW_KEY_P) punteroMariposa->ImprimirCuadrosClave();
-	}
-
 }
-void Animation() {
+
+void Animation()
+{
 	if (AnimBall)
 	{
 		rotBall += 0.4f;
-		//printf("%f", rotBall);
 	}
 
 	if (AnimDog)
 	{
 		rotDog -= 0.6f;
-		//printf("%f", rotBall);
 	}
-	if (dogAnim == 1) {	//Walk Animation
-		if (!step) {	//State 1
+	if (dogAnim == 1) {
+		if (!step) {
 			RLegs += 0.003f;
 			FLegs += 0.003f;
 			head += 0.003f;
 			tail += 0.003f;
 
-			if (RLegs > 15.0f)	//Condition
+			if (RLegs > 15.0f)
 				step = true;
 		}
 		else {
@@ -628,14 +570,13 @@ void Animation() {
 			head -= 0.003f;
 			tail -= 0.003f;
 
-			if (RLegs < -15.0f)	//Condition
+			if (RLegs < -15.0f)
 				step = false;
 		}
 		if (dogPos.z > 2.0)
 			dogAnim = 0;
 		dogPos.z += 0.0001;
 	}
-
 }
 
 void MouseCallback(GLFWwindow* window, double xPos, double yPos)
@@ -648,10 +589,16 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos)
 	}
 
 	GLfloat xOffset = xPos - lastX;
-	GLfloat yOffset = lastY - yPos;  // Reversed since y-coordinates go from bottom to left
+	GLfloat yOffset = lastY - yPos;
 
 	lastX = xPos;
 	lastY = yPos;
+
+	// Multiplicamos por un factor de sensibilidad extra (ejemplo: 2.0f o 3.0f)
+	// Puedes subir o bajar este número según qué tan rápido quieras que gire
+	GLfloat sensitivityMultiplier = 2.5f;
+	xOffset *= sensitivityMultiplier;
+	yOffset *= sensitivityMultiplier;
 
 	camera.ProcessMouseMovement(xOffset, yOffset);
 }
