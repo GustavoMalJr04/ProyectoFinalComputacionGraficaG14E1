@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <cmath>
 
 // GLEW
@@ -23,6 +23,7 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "Model.h"
+#include "MariposaKeyframes.h"   // Mariposa monarca animada por cuadros clave
 
 // Function prototypes
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -119,6 +120,9 @@ bool step = false;
 GLfloat deltaTime = 0.0f;	// Time between current frame and last frame
 GLfloat lastFrame = 0.0f;  	// Time of last frame
 
+// Mariposa monarca (puntero para usarla desde KeyCallback)
+MariposaKeyframes* punteroMariposa = nullptr;
+
 int main()
 {
 	// Init GLFW
@@ -131,7 +135,7 @@ int main()
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);*/
 
 	// Create a GLFWwindow object that we can use for GLFW's functions
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto D�a de Muertos", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto D�a de Muertos", nullptr, nullptr);
 
 	if (nullptr == window)
 	{
@@ -172,7 +176,7 @@ int main()
 	//models
 	Model skeleton((char*)"assets/models/skeleton/skeleton.obj");
 	Model craneo((char*)"assets/models/skeleton/craneo.obj");
-	
+
 	Model arcoEntrada((char*)"assets/models/edificacion/arcoEntrada.obj");
 	Model atrio1((char*)"assets/models/edificacion/atrio1.obj");
 	Model corredor((char*)"assets/models/edificacion/corredor.obj");
@@ -192,6 +196,32 @@ int main()
 	Model portonIzquierda((char*)"assets/models/edificacion/porton_hoja_izq.obj");
 	Model portonMarco((char*)"assets/models/edificacion/porton_marco.obj");
 	Model altar((char*)"assets/models/edificacion/altar.obj");
+
+	// ---------------- Mariposa monarca ----------------
+	Model modeloCuerpoMariposa((char*)"assets/models/mariposa/cuerpo.obj");
+	Model modeloAlaIzquierda((char*)"assets/models/mariposa/ala_izq.obj");
+	Model modeloAlaDerecha((char*)"assets/models/mariposa/ala_der.obj");
+
+	MariposaKeyframes mariposa(&modeloCuerpoMariposa, &modeloAlaIzquierda, &modeloAlaDerecha);
+	punteroMariposa = &mariposa;
+
+	mariposa.escala = 0.10f;   // unos 40 cm de punta a punta
+	mariposa.pasosEntreCuadros = 120;     // 2 segundos entre cuadros clave
+	mariposa.pasosEntreAleteos = 5;       // unos 6 aleteos por segundo
+	mariposa.ConfigurarAleteo(-15.0f, 75.0f);
+
+	// Vuelta de 1.5 m de radio alrededor del altar, que está en el origen (0, 0, 0)
+	//                           posX    posY    posZ    giroY   inclinacionX
+	mariposa.AgregarCuadroClave(1.50f, 1.10f, 0.00f, 180.0f, 10.0f);   // cuadro 0
+	mariposa.AgregarCuadroClave(1.06f, 1.40f, 1.06f, 135.0f, 0.0f);   // cuadro 1
+	mariposa.AgregarCuadroClave(0.00f, 1.20f, 1.50f, 90.0f, -10.0f);   // cuadro 2
+	mariposa.AgregarCuadroClave(-1.06f, 0.90f, 1.06f, 45.0f, 0.0f);   // cuadro 3
+	mariposa.AgregarCuadroClave(-1.50f, 1.10f, 0.00f, 0.0f, 10.0f);   // cuadro 4
+	mariposa.AgregarCuadroClave(-1.06f, 1.50f, -1.06f, -45.0f, 0.0f);   // cuadro 5
+	mariposa.AgregarCuadroClave(0.00f, 1.30f, -1.50f, -90.0f, -10.0f);   // cuadro 6
+	mariposa.AgregarCuadroClave(1.06f, 1.00f, -1.06f, -135.0f, 0.0f);   // cuadro 7
+
+	mariposa.ReproducirODetener();        // que empiece volando
 
 	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
@@ -222,6 +252,9 @@ int main()
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
+
+		// Avanza la animación de la mariposa (vuelo + aleteo)
+		mariposa.Actualizar(deltaTime);
 
 		// Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
 		glfwPollEvents();
@@ -439,6 +472,9 @@ int main()
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // Si no usa transparencias
 		altar.Draw(lightingShader);
 
+		// Mariposa monarca (después de los objetos opacos)
+		mariposa.Dibujar(lightingShader);
+
 		//model = glm::mat4(1.0f);
 		//model = glm::translate(model, glm::vec3(1.5f, 0.0f, 0.0f));
 
@@ -653,6 +689,17 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	{
 		dogAnim = 1;
 
+	}
+
+	// ---------------- Mariposa monarca ----------------
+	// L = reproducir/detener, K = guardar cuadro clave frente a la cámara,
+	// O = borrar cuadros clave, P = imprimir cuadros clave en consola
+	if (punteroMariposa != nullptr && action == GLFW_PRESS)
+	{
+		if (key == GLFW_KEY_L) punteroMariposa->ReproducirODetener();
+		if (key == GLFW_KEY_K) punteroMariposa->GuardarCuadroDesdeCamara(camera.GetPosition(), camera.GetFront());
+		if (key == GLFW_KEY_O) punteroMariposa->BorrarCuadrosClave();
+		if (key == GLFW_KEY_P) punteroMariposa->ImprimirCuadrosClave();
 	}
 
 }
