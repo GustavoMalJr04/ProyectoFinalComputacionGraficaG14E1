@@ -23,6 +23,7 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "Model.h"
+#include "PapelPicado.h"   // PAPEL PICADO: tiras con ondulacion en el panteon
 
 // Function prototypes
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -232,6 +233,16 @@ int main()
 	Model avenida((char*)"assets/models/edificacion/avenida.obj");
 	Model bosque((char*)"assets/models/edificacion/bosque.obj");
 	Model cesped((char*)"assets/models/edificacion/cesped.obj");
+
+	// ---------------- PAPEL PICADO ----------------
+	// 10 tiras de la barda oeste a la barda este del panteon (barda_panteon.obj),
+	// con los 8 colores Imagenes/pp_*.png intercalados. Ondulacion en Shader/lighting.vs.
+	glm::mat4 modeloBardas = glm::mat4(1.0f);   // MISMA matriz con la que se dibuja murosCementerio
+	PapelPicado papelPicado;
+	papelPicado.cargar("Imagenes");
+	papelPicado.colocarEnPanteon(modeloBardas);
+	std::cout << "Papel picado: " << papelPicado.totalBanderas() << " banderitas, punta mas baja en y = "
+		<< papelPicado.puntaMasBaja() << std::endl;
 	
 	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
@@ -353,8 +364,7 @@ int main()
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		iglesia.Draw(lightingShader);
 
-		model = glm::mat4(1.0f);
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		model = modeloBardas;   // PAPEL PICADO: las tiras se amarran con esta misma matriz
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		murosCementerio.Draw(lightingShader);
@@ -420,6 +430,10 @@ int main()
 		papelPicadoAltar.Draw(lightingShader);
 		glDisable(GL_BLEND);
 		glBindVertexArray(0);
+
+		// PAPEL PICADO del panteon (despues de los objetos opacos).
+		// Prende y apaga solo "ondula" y "transparency"; deja el culling como estaba.
+		papelPicado.dibujar(lightingShader, currentFrame);
 
 		// Dibujar el Esqueleto usando su posición global `skeletonPos`
 		model = glm::mat4(1.0f);
