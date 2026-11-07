@@ -9,7 +9,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 1
    map_Kd ../../textures/branch-1-01.png
-   map_d ../../textures/branch-1-01.png
+   map_Kd ../../textures/branch-1-01.png
 
 newmtl branch-2-02
 Ns 250.000000

@@ -190,6 +190,8 @@ int main()
 	Model altar((char*)"assets/models/edificacion/altar.obj");
 	Model papelPicadoAltar((char*)"assets/models/edificacion/papelPicadoAltar.obj");
 	Model avenida((char*)"assets/models/edificacion/avenida.obj");
+	Model bosque((char*)"assets/models/edificacion/bosque.obj");
+	Model cesped((char*)"assets/models/edificacion/cesped.obj");
 	
 	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
@@ -335,6 +337,17 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		avenida.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		bosque.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -0.25f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		cesped.Draw(lightingShader);
 
 		//dibujar panteon 
 		model = glm::mat4(1.0f);
