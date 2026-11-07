@@ -100,7 +100,16 @@ float vertices[] = {
 glm::vec3 skeletonPos(1.5f, 0.0f, 0.0f);
 
 glm::vec3 Light1 = glm::vec3(0);
-//Anim
+
+//Animacion del Esqueleto
+float skelWalkCycle = 0.0f;
+bool isWalking = false;
+
+//Amgulos individuales para las articulaciones del esqueleto
+float skelArmAngle = 0.0f;
+float skelLegAngle = 0.0f;
+float skelForearmAngle = 0.0f;
+
 float rotBall = 0.0f;
 bool AnimBall = false;
 bool AnimDog = false;
@@ -117,6 +126,37 @@ bool step = false;
 // Deltatime
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
+
+//Estructuras para las colisiones
+struct BoundingBox {
+	float minX, maxX;
+	float minZ, maxZ;
+};
+
+//Lista de paredes invisibles
+std::vector<BoundingBox> invisibleWalls = {
+	{  -120.0f, 120.0f, 80.0f, 85.0f },
+	{  -65.0f, -60.0f, -80.0f, 80.0f },
+	{  60.0f, 65.0f, -80.0f, 80.0f },
+	{  10.0f, 15.0f,  5.0f,  40.0f },
+	{  10.0f, 15.0f, -60.0f,  -4.75f }
+};
+
+bool CheckCollision(glm::vec3 pos)
+{
+	// Margen de radio del esqueleto (para que no choque "exactamente" en el centro del pivote)
+	float skeletonRadius = 0.5f;
+
+	for (const auto& wall : invisibleWalls)
+	{
+		if (pos.x + skeletonRadius >= wall.minX && pos.x - skeletonRadius <= wall.maxX &&
+			pos.z + skeletonRadius >= wall.minZ && pos.z - skeletonRadius <= wall.maxZ)
+		{
+			return true; // ¡Hubo colisión!
+		}
+	}
+	return false; // Libre de obstáculos
+}
 
 int main()
 {
@@ -387,78 +427,43 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 
-		modelTemp = model = glm::rotate(model, glm::radians(dogRot), glm::vec3(0.0f, 1.0f, 0.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		modelTemp = model;
 		pecho.Draw(lightingShader);
 
 		model = modelTemp;
-		model = glm::rotate(model, glm::radians(head), glm::vec3(0.0f, 0.0f, 1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		craneo.Draw(lightingShader);
 
 		model = modelTemp;
-		model = glm::rotate(model, glm::radians(tail), glm::vec3(0.0f, 0.0f, -1.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		antebrazoDer.Draw(lightingShader);
-
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(FLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		antebrazoIzq.Draw(lightingShader);
-
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(FLegs), glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(skelArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		brazoDer.Draw(lightingShader);
 
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(1.0f, 0.0f, 0.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		brazoIzq.Draw(lightingShader);
-
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		femurDer.Draw(lightingShader);
-
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		femurIzq.Draw(lightingShader);
-
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		antebrazoDer.Draw(lightingShader);
 		manoDer.Draw(lightingShader);
 
 		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(-skelArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		brazoIzq.Draw(lightingShader);
+
+		antebrazoIzq.Draw(lightingShader);
 		manoIzq.Draw(lightingShader);
 
 		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(-skelLegAngle), glm::vec3(1.0f, 0.0f, 0.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		femurDer.Draw(lightingShader);
+		piernaDer.Draw(lightingShader);
 		pieDer.Draw(lightingShader);
 
 		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(skelLegAngle), glm::vec3(1.0f, 0.0f, 0.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		femurIzq.Draw(lightingShader);
+		piernaIzq.Draw(lightingShader);
 		pieIzq.Draw(lightingShader);
 
 		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		piernaDer.Draw(lightingShader);
-
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		piernaIzq.Draw(lightingShader);
-
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(RLegs), glm::vec3(-1.0f, 0.0f, 0.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		skeleton.Draw(lightingShader);
 
 		// Lamp object
@@ -487,10 +492,8 @@ int main()
 
 void DoMovement()
 {
-	// Velocidad de movimiento del esqueleto
 	GLfloat cameraSpeed = 5.0f * deltaTime;
 
-	// Obtenemos la dirección frontal plana (para que no vuele al mirar hacia arriba/abajo)
 	glm::vec3 front = camera.GetFront();
 	front.y = 0.0f;
 	front = glm::normalize(front);
@@ -499,27 +502,53 @@ void DoMovement()
 	right.y = 0.0f;
 	right = glm::normalize(right);
 
-	// Movimiento hacia adelante / atrás (W / S o Flechas)
+	// Copiamos la posición actual para calcular el siguiente paso
+	glm::vec3 nextPos = skeletonPos;
+	bool isMoving = false;
+
+	// Movimiento hacia adelante / atrás
 	if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP])
 	{
-		skeletonPos += front * cameraSpeed;
+		nextPos += front * cameraSpeed;
+		isMoving = true;
 	}
 	if (keys[GLFW_KEY_S] || keys[GLFW_KEY_DOWN])
 	{
-		skeletonPos -= front * cameraSpeed;
+		nextPos -= front * cameraSpeed;
+		isMoving = true;
 	}
 
-	// Movimiento lateral (A / D o Flechas Izquierda / Derecha)
+	// Movimiento lateral (A / D)
 	if (keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT])
 	{
-		skeletonPos -= right * cameraSpeed;
+		nextPos -= right * cameraSpeed;
+		isMoving = true;
 	}
 	if (keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT])
 	{
-		skeletonPos += right * cameraSpeed;
+		nextPos += right * cameraSpeed;
+		isMoving = true;
 	}
 
-	// Control manual de las luces con T, G, Y, H, U, J (lo conservamos tal cual)
+	// Comprobamos colisión antes de aplicar el movimiento
+	if (isMoving)
+	{
+		if (!CheckCollision(nextPos))
+		{
+			skeletonPos = nextPos; // Si no choca, el esqueleto se mueve libremente
+			isWalking = true;
+		}
+		else
+		{
+			isWalking = false; // Chocó, se detiene la animación de caminata
+		}
+	}
+	else
+	{
+		isWalking = false;
+	}
+
+	// Control manual de las luces (lo conservas igual)
 	if (keys[GLFW_KEY_T]) { pointLightPositions[0].x += 0.01f; }
 	if (keys[GLFW_KEY_G]) { pointLightPositions[0].x -= 0.01f; }
 	if (keys[GLFW_KEY_Y]) { pointLightPositions[0].y += 0.01f; }
@@ -571,37 +600,22 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 
 void Animation()
 {
-	if (AnimBall)
+	if (isWalking)
 	{
-		rotBall += 0.4f;
-	}
+		// Incrementamos el ciclo de caminata basado en el tiempo
+		skelWalkCycle += deltaTime * 8.0f;
 
-	if (AnimDog)
+		// Usamos seno para crear el balanceo periódico de las extremidades
+		skelArmAngle = sin(skelWalkCycle) * 25.0f;       // Rango de -25° a 25° para los brazos
+		skelLegAngle = sin(skelWalkCycle) * 25.0f;       // Rango de -25° a 25° para las piernas
+		skelForearmAngle = abs(sin(skelWalkCycle)) * 15.0f; // Flexión natural del codo
+	}
+	else
 	{
-		rotDog -= 0.6f;
-	}
-	if (dogAnim == 1) {
-		if (!step) {
-			RLegs += 0.003f;
-			FLegs += 0.003f;
-			head += 0.003f;
-			tail += 0.003f;
-
-			if (RLegs > 15.0f)
-				step = true;
-		}
-		else {
-			RLegs -= 0.003f;
-			FLegs -= 0.003f;
-			head -= 0.003f;
-			tail -= 0.003f;
-
-			if (RLegs < -15.0f)
-				step = false;
-		}
-		if (dogPos.z > 2.0)
-			dogAnim = 0;
-		dogPos.z += 0.0001;
+		// Si no se mueve, regresamos las extremidades suavemente a su posición base (0)
+		skelArmAngle = 0.0f;
+		skelLegAngle = 0.0f;
+		skelForearmAngle = 0.0f;
 	}
 }
 
