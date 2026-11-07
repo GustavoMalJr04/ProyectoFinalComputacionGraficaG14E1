@@ -1,4 +1,4 @@
-#include <iostream>
+ï»¿#include <iostream>
 #include <cmath>
 
 /// GLEW
@@ -97,8 +97,18 @@ float vertices[] = {
 	   -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 };
 
-// Posición base del esqueleto en el mundo
+// Posiciï¿½n base del esqueleto en el mundo
 glm::vec3 skeletonPos(1.5f, 0.0f, 0.0f);
+
+// ---------------- PORTON DEL PANTEON ----------------
+// Las hojas (porton_izq.obj / porton_der.obj) tienen el origen en la bisagra: ese es su pivote.
+glm::vec3 portonCentro(32.3f, 0.0f, 50.0f); // centro del hueco del marco (ajustar si no encaja)
+float portonRotY = 0.0f;    // orientacion del porton respecto a la barda
+float portonAncho = 1.57f;   // ancho de una hoja (sale del .obj)
+float anguloPorton = 0.0f;   // angulo actual: 0 = cerrado
+float anguloMax = 90.0f;     // angulo abierto
+float velPorton = 60.0f;     // grados por segundo
+bool  abrirPorton = false;   // se cambia con la tecla O
 
 glm::vec3 Light1 = glm::vec3(0);
 
@@ -153,10 +163,10 @@ bool CheckCollision(glm::vec3 pos)
 		if (pos.x + skeletonRadius >= wall.minX && pos.x - skeletonRadius <= wall.maxX &&
 			pos.z + skeletonRadius >= wall.minZ && pos.z - skeletonRadius <= wall.maxZ)
 		{
-			return true; // ¡Hubo colisión!
+			return true; // ï¿½Hubo colisiï¿½n!
 		}
 	}
-	return false; // Libre de obstáculos
+	return false; // Libre de obstï¿½culos
 }
 
 int main()
@@ -243,7 +253,7 @@ int main()
 	papelPicado.colocarEnPanteon(modeloBardas);
 	std::cout << "Papel picado: " << papelPicado.totalBanderas() << " banderitas, punta mas baja en y = "
 		<< papelPicado.puntaMasBaja() << std::endl;
-	
+
 	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
 	glGenVertexArrays(1, &VAO);
@@ -277,7 +287,7 @@ int main()
 		DoMovement();
 		Animation();
 
-		// Sincronizar la cámara con la posición del esqueleto
+		// Sincronizar la cï¿½mara con la posiciï¿½n del esqueleto
 		camera.SetPosition(skeletonPos + glm::vec3(0.0f, 2.0f, -0.5f));
 
 		// Clear the colorbuffer
@@ -405,15 +415,32 @@ int main()
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		pisoCementerio.Draw(lightingShader);
 		portonMarco.Draw(lightingShader);
-		portonDerecha.Draw(lightingShader);
-		portonIzquierda.Draw(lightingShader);
 		cruzPanteon.Draw(lightingShader);
 		cruzMadera1.Draw(lightingShader);
 		cruzMadera2.Draw(lightingShader);
 		lapida1.Draw(lightingShader);
 		farol1.Draw(lightingShader);
 
-		// Dibujar la estructura del altar (Sólida)
+		// ---- Porton: cada hoja gira sobre su bisagra (pivote = origen del .obj) ----
+		glm::mat4 portonBase = glm::mat4(1.0f);
+		portonBase = glm::translate(portonBase, portonCentro);                                       // al hueco del marco
+		portonBase = glm::rotate(portonBase, glm::radians(portonRotY), glm::vec3(0.0f, 1.0f, 0.0f)); // orientado con la barda
+
+		// Hoja izquierda: bisagra en -ancho, la hoja crece hacia +X hasta el centro
+		model = portonBase;
+		model = glm::translate(model, glm::vec3(-portonAncho, 0.0f, 0.0f));                  // pivote = bisagra
+		model = glm::rotate(model, glm::radians(anguloPorton), glm::vec3(0.0f, 1.0f, 0.0f)); // gira sobre el pivote
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		portonIzquierda.Draw(lightingShader);
+
+		// Hoja derecha: bisagra en +ancho, gira al reves para abrir hacia el mismo lado
+		model = portonBase;
+		model = glm::translate(model, glm::vec3(portonAncho, 0.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(-anguloPorton), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		portonDerecha.Draw(lightingShader);
+
+		// Dibujar la estructura del altar (Sï¿½lida)
 		model = glm::mat4(1.0f);
 		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -435,7 +462,7 @@ int main()
 		// Prende y apaga solo "ondula" y "transparency"; deja el culling como estaba.
 		papelPicado.dibujar(lightingShader, currentFrame);
 
-		// Dibujar el Esqueleto usando su posición global `skeletonPos`
+		// Dibujar el Esqueleto usando su posiciï¿½n global `skeletonPos`
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, skeletonPos);
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -516,11 +543,11 @@ void DoMovement()
 	right.y = 0.0f;
 	right = glm::normalize(right);
 
-	// Copiamos la posición actual para calcular el siguiente paso
+	// Copiamos la posiciï¿½n actual para calcular el siguiente paso
 	glm::vec3 nextPos = skeletonPos;
 	bool isMoving = false;
 
-	// Movimiento hacia adelante / atrás
+	// Movimiento hacia adelante / atrï¿½s
 	if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP])
 	{
 		nextPos += front * cameraSpeed;
@@ -544,7 +571,7 @@ void DoMovement()
 		isMoving = true;
 	}
 
-	// Comprobamos colisión antes de aplicar el movimiento
+	// Comprobamos colisiï¿½n antes de aplicar el movimiento
 	if (isMoving)
 	{
 		if (!CheckCollision(nextPos))
@@ -554,7 +581,7 @@ void DoMovement()
 		}
 		else
 		{
-			isWalking = false; // Chocó, se detiene la animación de caminata
+			isWalking = false; // Chocï¿½, se detiene la animaciï¿½n de caminata
 		}
 	}
 	else
@@ -610,6 +637,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	{
 		dogAnim = 1;
 	}
+
+	// Porton del panteon: O abre / cierra (una vez por pulsacion)
+	if (key == GLFW_KEY_O && action == GLFW_PRESS)
+	{
+		abrirPorton = !abrirPorton;
+	}
 }
 
 void Animation()
@@ -619,18 +652,25 @@ void Animation()
 		// Incrementamos el ciclo de caminata basado en el tiempo
 		skelWalkCycle += deltaTime * 8.0f;
 
-		// Usamos seno para crear el balanceo periódico de las extremidades
-		skelArmAngle = sin(skelWalkCycle) * 25.0f;       // Rango de -25° a 25° para los brazos
-		skelLegAngle = sin(skelWalkCycle) * 25.0f;       // Rango de -25° a 25° para las piernas
-		skelForearmAngle = abs(sin(skelWalkCycle)) * 15.0f; // Flexión natural del codo
+		// Usamos seno para crear el balanceo periï¿½dico de las extremidades
+		skelArmAngle = sin(skelWalkCycle) * 25.0f;       // Rango de -25ï¿½ a 25ï¿½ para los brazos
+		skelLegAngle = sin(skelWalkCycle) * 25.0f;       // Rango de -25ï¿½ a 25ï¿½ para las piernas
+		skelForearmAngle = abs(sin(skelWalkCycle)) * 15.0f; // Flexiï¿½n natural del codo
 	}
 	else
 	{
-		// Si no se mueve, regresamos las extremidades suavemente a su posición base (0)
+		// Si no se mueve, regresamos las extremidades suavemente a su posiciï¿½n base (0)
 		skelArmAngle = 0.0f;
 		skelLegAngle = 0.0f;
 		skelForearmAngle = 0.0f;
 	}
+
+	// Porton: avanza hacia abierto o cerrado a velocidad constante
+	float objetivo = abrirPorton ? anguloMax : 0.0f;
+	if (anguloPorton < objetivo)
+		anguloPorton = glm::min(anguloPorton + velPorton * deltaTime, objetivo);
+	else if (anguloPorton > objetivo)
+		anguloPorton = glm::max(anguloPorton - velPorton * deltaTime, objetivo);
 }
 
 void MouseCallback(GLFWwindow* window, double xPos, double yPos)
@@ -649,7 +689,7 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos)
 	lastY = yPos;
 
 	// Multiplicamos por un factor de sensibilidad extra (ejemplo: 2.0f o 3.0f)
-	// Puedes subir o bajar este número según qué tan rápido quieras que gire
+	// Puedes subir o bajar este nï¿½mero segï¿½n quï¿½ tan rï¿½pido quieras que gire
 	GLfloat sensitivityMultiplier = 2.5f;
 	xOffset *= sensitivityMultiplier;
 	yOffset *= sensitivityMultiplier;
