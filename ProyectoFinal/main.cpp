@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cmath>
 
-// GLEW
+/// GLEW
 #include <GL/glew.h>
 
 // GLFW
