@@ -110,6 +110,22 @@ float anguloMax = 90.0f;     // angulo abierto
 float velPorton = 60.0f;     // grados por segundo
 bool  abrirPorton = false;   // se cambia con la tecla O
 
+// ---------------- TUMBAS DEL PANTEON ----------------
+// Los 6 monticulos ya vienen modelados dentro de piso_panteon.obj.
+// lapida.obj y cruz_pequena.obj tienen su origen en la base (centro), asi que
+// basta trasladarlas a la cabecera (+Z) de cada monticulo, sobre su altura.
+// x = centro del monticulo, y = altura de la cima, z = cabecera (borde +Z de la cima - 0.25)
+glm::vec3 posLapidas[4] = {
+	glm::vec3(37.66f, 0.29f, -27.81f),   // monticulo fondo-este
+	glm::vec3(27.11f, 0.36f, -27.81f),   // monticulo fondo-oeste
+	glm::vec3(27.14f, 0.35f,  -7.97f),   // monticulo centro-oeste
+	glm::vec3(37.68f, 0.25f,  -7.75f)    // monticulo centro-este
+};
+glm::vec3 posCruces[2] = {
+	glm::vec3(27.10f, 0.14f, 12.87f),    // monticulo entrada-oeste (y un poco enterrada)
+	glm::vec3(37.62f, 0.40f, 12.95f)     // monticulo entrada-este
+};
+
 glm::vec3 Light1 = glm::vec3(0);
 
 //Animacion del Esqueleto
@@ -420,6 +436,22 @@ int main()
 		cruzMadera2.Draw(lightingShader);
 		lapida1.Draw(lightingShader);
 		farol1.Draw(lightingShader);
+
+		// ---- TUMBAS: 4 lapidas + 2 cruces pequenas en la cabecera de los monticulos ----
+		for (int i = 0; i < 4; i++)
+		{
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, posLapidas[i]);
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			lapida1.Draw(lightingShader);
+		}
+		for (int i = 0; i < 2; i++)
+		{
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, posCruces[i]);
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			cruzMadera1.Draw(lightingShader);
+		}
 
 		// ---- Porton: cada hoja gira sobre su bisagra (pivote = origen del .obj) ----
 		glm::mat4 portonBase = glm::mat4(1.0f);
