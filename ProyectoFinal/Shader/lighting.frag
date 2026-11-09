@@ -69,6 +69,7 @@ void main( )
 {
     // Properties
     vec3 norm = normalize( Normal );
+    if ( !gl_FrontFacing ) norm = -norm;   // papel picado: se ilumina igual por los dos lados
     vec3 viewDir = normalize( viewPos - FragPos );
     
     // Directional lighting
@@ -83,7 +84,10 @@ void main( )
     // Spot light
     result += CalcSpotLight( spotLight, norm, FragPos, viewDir );
  	
-    color = vec4( result,texture(material.diffuse, TexCoords).rgb );
+    // Antes: vec4(result, texture(...).rgb) -> el alfa salia del canal ROJO.
+    // Ahora el alfa es el canal A real del PNG (papel picado del altar y del panteon).
+    float alpha = texture( material.diffuse, TexCoords ).a;
+    color = vec4( result, alpha );
 	  if(color.a < 0.1 && transparency==1)
         discard;
 
