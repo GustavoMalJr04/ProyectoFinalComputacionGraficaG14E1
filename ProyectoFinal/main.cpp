@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <algorithm>
+#include <utility>
 #include <windows.h>
 #pragma comment(lib, "winmm.lib")
 
@@ -56,7 +58,7 @@ bool active;
 
 // Positions of the point lights
 glm::vec3 pointLightPositions[] = {
-	glm::vec3(0.0f,2.0f, 0.0f),
+	glm::vec3(-20.0f, 3.2f, 4.5f),   // luz de colores (Espacio): frente a la ofrenda, en el centro del atrio
 	glm::vec3(0.0f,0.0f, 0.0f),
 	glm::vec3(0.0f,0.0f,  0.0f),
 	glm::vec3(0.0f,0.0f, 0.0f)
@@ -189,6 +191,17 @@ glm::vec3 posCruces[2] = {
 	glm::vec3(27.10f, 0.14f, 12.87f),
 	glm::vec3(37.62f, 0.40f, 12.95f)
 };
+
+// ---------------- OFRENDA (ALTAR) ----------------
+// altar.obj sin escalar: x = -4..4, z = -1.42..3.71, alto 4.5. El frente (los escalones
+// que bajan) mira hacia +Z, o sea hacia el arco de entrada.
+// Se pone en el centro de la explanada del atrio (atrio_explanada se dibuja en x = -20:
+// cubre x = -50..10, z = -50..50) y más grande que antes (antes 0.5).
+const glm::vec3 posAltar(-20.0f, 0.0f, 0.0f);
+const float escalaAltar = 0.8f;   // 6.4 m de ancho, 3.6 m de alto
+// Huella del altar ya escalado y colocado (para flores, velas y colisión)
+const float altarX0 = -20.0f - 4.0f * 0.8f, altarX1 = -20.0f + 4.0f * 0.8f;
+const float altarZ0 = -1.42f * 0.8f, altarZ1 = 3.71f * 0.8f;
 
 // ---------------- SENDERO DE CEMPASUCHIL (ofrenda -> tumbas) ----------------
 // Montículos de tierra medidos de piso_panteon.obj: x0, x1, z0, z1
@@ -575,12 +588,20 @@ void construirSendero()
 	cargarPisoPanteon("assets/models/edificacion/piso_panteon.obj");
 
 	// 1. Frente de la ofrenda -> corredor -> pasillo central del panteón
+	//    Sale del frente del altar, cruza la explanada con una curva suave
+	//    y entra al corredor del panteón (x = 10..15, z = -5..5).
 	glm::vec3 ruta[] = {
-		glm::vec3(0.0f, 0.0f, 2.6f),  glm::vec3(5.0f, 0.0f, 2.2f),
-		glm::vec3(9.0f, 0.0f, 0.3f),  glm::vec3(15.0f, 0.0f, 0.0f),
-		glm::vec3(24.0f, 0.0f, 0.0f), glm::vec3(xPasillo, 0.0f, 0.0f)
+		glm::vec3(posAltar.x, 0.0f, altarZ1 + 0.9f),
+		glm::vec3(-13.0f, 0.0f, 4.6f),
+		glm::vec3(-5.0f, 0.0f, 3.8f),
+		glm::vec3(3.0f, 0.0f, 2.0f),
+		glm::vec3(9.0f, 0.0f, 0.3f),
+		glm::vec3(15.0f, 0.0f, 0.0f),
+		glm::vec3(24.0f, 0.0f, 0.0f),
+		glm::vec3(xPasillo, 0.0f, 0.0f)
 	};
-	for (int i = 0; i < 5; i++) agregarTramo(ruta[i], ruta[i + 1]);
+	const int numPuntosRuta = sizeof(ruta) / sizeof(ruta[0]);
+	for (int i = 0; i < numPuntosRuta - 1; i++) agregarTramo(ruta[i], ruta[i + 1]);
 
 	// 2. Pasillo central hacia las tumbas de los dos lados
 	agregarTramo(glm::vec3(xPasillo, 0.0f, 0.0f), glm::vec3(xPasillo, 0.0f, -25.56f));
@@ -596,14 +617,29 @@ void construirSendero()
 		agregarTramo(glm::vec3(xPasillo, 0.0f, zc), glm::vec3(xFin, 0.0f, zc));
 	}
 
-	// 4. Flores a los lados y al frente de la ofrenda (altar: x -2..2, z -0.7..1.9)
-	for (float z = -0.6f; z <= 2.0f; z += 0.45f)
+	// 4. Flores y velas alrededor de la ofrenda: a los dos lados y al frente.
+	//    Flor, vela, flor, vela... con velas grande y chica intercaladas.
 	{
-		agregarFlor(glm::vec3(-2.35f, 0.0f, z));
-		agregarFlor(glm::vec3(2.35f, 0.0f, z));
+		const float sep = 0.4f;   // qué tan afuera del altar
+		float xIzq = altarX0 - sep, xDer = altarX1 + sep, zFrente = altarZ1 + sep;
+		int k = 0;
+		for (float z = altarZ0 + 0.2f; z <= zFrente + 0.01f; z += 0.7f, k++)
+		{
+			agregarFlor(glm::vec3(xIzq, 0.0f, z), 0.34f);
+			agregarFlor(glm::vec3(xDer, 0.0f, z), 0.34f);
+			if (z + 0.7f <= zFrente + 0.01f)
+			{
+				agregarVela(glm::vec3(xIzq, 0.0f, z + 0.35f), k % 2 == 0);
+				agregarVela(glm::vec3(xDer, 0.0f, z + 0.35f), k % 2 == 1);
+			}
+		}
+		k = 0;
+		for (float x = xIzq + 0.7f; x < xDer - 0.3f; x += 0.7f, k++)
+		{
+			agregarFlor(glm::vec3(x, 0.0f, zFrente), 0.34f);
+			agregarVela(glm::vec3(x + 0.35f, 0.0f, zFrente), k % 2 == 0);
+		}
 	}
-	for (float x = -2.0f; x <= 2.01f; x += 0.45f)
-		agregarFlor(glm::vec3(x, 0.0f, 2.3f));
 
 	// 5. Arriates al pie de toda la barda del panteón
 	agregarFloresPerimetroPanteon();
@@ -624,6 +660,114 @@ void construirSendero()
 }
 
 glm::vec3 Light1 = glm::vec3(0);
+
+// =====================================================================
+//  NOCHE: LUZ DE LUNA, NIEBLA Y LUZ DE LAS VELAS
+//  (van con Shader/lighting.frag; todos los valores se ajustan aquí)
+// =====================================================================
+// Luna: luz de noche clara, apenas azulada para que se sigan viendo los colores
+// de los modelos. Para más oscuro bájalos; para más claro súbelos.
+const glm::vec3 LUNA_AMBIENTE(0.24f, 0.25f, 0.30f);
+const glm::vec3 LUNA_DIFUSA(0.38f, 0.40f, 0.48f);
+const glm::vec3 LUNA_ESPECULAR(0.08f, 0.08f, 0.10f);
+
+// Niebla nocturna: color del horizonte del skybox y qué tan espesa es
+const glm::vec3 NIEBLA_COLOR(0.02f, 0.025f, 0.05f);
+const float NIEBLA_DENSIDAD = 0.014f;   // más ligera para que no apague los colores
+
+// Luz de las velas
+const glm::vec3 COLOR_VELA(1.0f, 0.55f, 0.20f);   // naranja cálido
+const float BRILLO_VELAS = 1.3f;          // resplandor general de todas las velas (mapa)
+const float INTENSIDAD_LUZ_VELA = 1.2f;   // fuerza de cada vela cercana a la cámara
+const float ALTURA_LUZ_VELAS = 2.5f;      // a partir de esta altura ya no llega el resplandor
+const int   MAX_LUCES_VELA = 16;          // debe coincidir con MAX_LUCES_VELA del shader
+
+// Mapa de luz de velas: textura vista desde arriba, de -60 a 60 m en x y en z
+const glm::vec2 MAPA_MIN(-60.0f, -60.0f);
+const float MAPA_TAM = 120.0f;
+const int   MAPA_RES = 512;                // 512 x 512 texeles (~23 cm cada uno)
+const float RADIO_RESPLANDOR = 3.0f;       // hasta dónde llega la luz de una vela
+
+bool linterna = false;                     // tecla F: linterna de la cámara
+
+// Parpadeo de una vela (lo usan la llama y su luz, así titilan juntas)
+float parpadeoVela(const Vela& v, float tiempo)
+{
+	return 1.0f + 0.08f * sin(tiempo * 12.0f + v.fase)
+		+ 0.04f * sin(tiempo * 23.0f + 2.0f * v.fase);
+}
+
+// Se calcula UNA vez al iniciar: suma la luz de las 412 velas en cada texel.
+GLuint crearMapaLuzVelas()
+{
+	std::vector<float> luz(MAPA_RES * MAPA_RES, 0.0f);
+	const float texel = MAPA_TAM / MAPA_RES;
+	const int rt = (int)(RADIO_RESPLANDOR / texel) + 1;
+
+	for (const Vela& v : velas)
+	{
+		float fuerza = v.sXZ / VELA_GRANDE_XZ;   // las chicas alumbran un poco menos
+		int cx = (int)((v.pos.x - MAPA_MIN.x) / texel);
+		int cz = (int)((v.pos.z - MAPA_MIN.y) / texel);
+		for (int j = cz - rt; j <= cz + rt; j++)
+			for (int i = cx - rt; i <= cx + rt; i++)
+			{
+				if (i < 0 || j < 0 || i >= MAPA_RES || j >= MAPA_RES) continue;
+				float wx = MAPA_MIN.x + (i + 0.5f) * texel - v.pos.x;
+				float wz = MAPA_MIN.y + (j + 0.5f) * texel - v.pos.z;
+				float r = sqrt(wx * wx + wz * wz);
+				if (r >= RADIO_RESPLANDOR) continue;
+				float t = 1.0f - r / RADIO_RESPLANDOR;
+				luz[j * MAPA_RES + i] += fuerza * t * t;   // cae suave hacia la orilla
+			}
+	}
+	// Donde hay muchas velas juntas la luz se satura suave en vez de quemar el color
+	for (float& l : luz) l = 1.0f - exp(-l);
+
+	GLuint id;
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_2D, id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, MAPA_RES, MAPA_RES, 0, GL_RED, GL_FLOAT, luz.data());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	return id;
+}
+
+// Cada cuadro: las MAX_LUCES_VELA velas más cercanas a la cámara se mandan al
+// shader como luces puntuales. Las que están por salir de la lista se apagan
+// poco a poco para que no "brinque" la luz al caminar.
+void mandarLucesVelas(GLuint programa, glm::vec3 posCam, float tiempo)
+{
+	std::vector<std::pair<float, int>> orden;
+	orden.reserve(velas.size());
+	for (int i = 0; i < (int)velas.size(); i++)
+		orden.push_back(std::make_pair(distancia2(velas[i].pos, posCam), i));
+
+	int n = std::min((int)orden.size(), MAX_LUCES_VELA);
+	std::partial_sort(orden.begin(), orden.begin() + n, orden.end());
+	float dCorte = ((int)orden.size() > n) ? sqrt(orden[n].first) : 1e6f;
+
+	glm::vec3 pos[MAX_LUCES_VELA];
+	float inten[MAX_LUCES_VELA];
+	for (int k = 0; k < n; k++)
+	{
+		const Vela& v = velas[orden[k].second];
+		float d = sqrt(orden[k].first);
+		float desvanecer = glm::clamp((dCorte - d) / 2.0f, 0.0f, 1.0f);
+		pos[k] = v.pos + glm::vec3(0.0f, v.sY + 0.12f * v.sXZ, 0.0f);   // centro de la llama
+		inten[k] = INTENSIDAD_LUZ_VELA * (v.sXZ / VELA_GRANDE_XZ) * parpadeoVela(v, tiempo) * desvanecer;
+	}
+
+	glUniform1i(glGetUniformLocation(programa, "numLucesVela"), n);
+	if (n > 0)
+	{
+		glUniform3fv(glGetUniformLocation(programa, "luzVelaPos"), n, glm::value_ptr(pos[0]));
+		glUniform1fv(glGetUniformLocation(programa, "luzVelaInt"), n, inten);
+	}
+}
 
 //Animacion del Esqueleto
 float skelWalkCycle = 0.0f;
@@ -665,7 +809,8 @@ std::vector<BoundingBox> invisibleWalls = {
 	{  -65.0f, -60.0f, -80.0f, 80.0f },
 	{  60.0f, 65.0f, -80.0f, 80.0f },
 	{  10.0f, 15.0f,  5.0f,  40.0f },
-	{  10.0f, 15.0f, -60.0f,  -4.75f }
+	{  10.0f, 15.0f, -60.0f,  -4.75f },
+	{ -23.3f, -16.7f, -1.25f,  3.1f }   // ofrenda en el centro del atrio (posAltar, escala 0.8)
 };
 
 bool CheckCollision(glm::vec3 pos)
@@ -841,6 +986,17 @@ int main()
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "material.diffuse"), 0);
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "material.specular"), 1);
 
+	// ---------------- NOCHE: valores fijos del shader ----------------
+	GLuint mapaLuzVelas = crearMapaLuzVelas();   // ya existen las velas (construirSendero)
+	glUniform1i(glGetUniformLocation(lightingShader.Program, "mapaVelas"), 5);   // unidad 5: Mesh usa la 0 y la 1
+	glUniform2f(glGetUniformLocation(lightingShader.Program, "mapaMin"), MAPA_MIN.x, MAPA_MIN.y);
+	glUniform1f(glGetUniformLocation(lightingShader.Program, "mapaTam"), MAPA_TAM);
+	glUniform1f(glGetUniformLocation(lightingShader.Program, "alturaLuzVelas"), ALTURA_LUZ_VELAS);
+	glUniform3f(glGetUniformLocation(lightingShader.Program, "colorVela"), COLOR_VELA.x, COLOR_VELA.y, COLOR_VELA.z);
+	glUniform3f(glGetUniformLocation(lightingShader.Program, "colorNiebla"), NIEBLA_COLOR.x, NIEBLA_COLOR.y, NIEBLA_COLOR.z);
+	glUniform1f(glGetUniformLocation(lightingShader.Program, "densidadNiebla"), NIEBLA_DENSIDAD);
+	glUniform1i(glGetUniformLocation(lightingShader.Program, "emisivo"), 0);
+
 	glm::mat4 projection = glm::perspective(camera.GetZoom(), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 0.1f, 100.0f);
 
 	// Abrir y reproducir el MP3 en bucle (repeat)
@@ -859,7 +1015,7 @@ int main()
 
 		camera.SetPosition(skeletonPos + glm::vec3(0.0f, 2.0f, -0.25f));
 
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClearColor(NIEBLA_COLOR.x, NIEBLA_COLOR.y, NIEBLA_COLOR.z, 1.0f);   // noche
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glEnable(GL_DEPTH_TEST);
@@ -873,10 +1029,19 @@ int main()
 		GLint viewPosLoc = glGetUniformLocation(lightingShader.Program, "viewPos");
 		glUniform3f(viewPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 
+		// Luna (luz direccional de noche: tenue y azulada)
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.direction"), -0.2f, -1.0f, -0.3f);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.ambient"), 0.6f, 0.6f, 0.6f);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.diffuse"), 0.6f, 0.6f, 0.6f);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.specular"), 0.3f, 0.3f, 0.3f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.ambient"), LUNA_AMBIENTE.x, LUNA_AMBIENTE.y, LUNA_AMBIENTE.z);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.diffuse"), LUNA_DIFUSA.x, LUNA_DIFUSA.y, LUNA_DIFUSA.z);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.specular"), LUNA_ESPECULAR.x, LUNA_ESPECULAR.y, LUNA_ESPECULAR.z);
+
+		// Velas: mapa de resplandor (unidad 5) + las más cercanas como luces puntuales
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, mapaLuzVelas);
+		glActiveTexture(GL_TEXTURE0);
+		float pulso = 1.0f + 0.04f * sin(currentFrame * 9.0f) + 0.03f * sin(currentFrame * 17.0f);
+		glUniform1f(glGetUniformLocation(lightingShader.Program, "brilloVelas"), BRILLO_VELAS * pulso);
+		mandarLucesVelas(lightingShader.Program, camera.GetPosition(), currentFrame);
 
 		glm::vec3 lightColor;
 		lightColor.x = abs(sin(glfwGetTime() * Light1.x));
@@ -893,12 +1058,14 @@ int main()
 
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.position"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.direction"), camera.GetFront().x, camera.GetFront().y, camera.GetFront().z);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.ambient"), 0.2f, 0.2f, 0.8f);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.diffuse"), 0.2f, 0.2f, 0.8f);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.specular"), 0.0f, 0.0f, 0.0f);
+		// Linterna de la cámara: apagada de inicio, se prende/apaga con F
+		float lin = linterna ? 1.0f : 0.0f;
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.ambient"), 0.0f, 0.0f, 0.0f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.diffuse"), 0.9f * lin, 0.85f * lin, 0.7f * lin);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.specular"), 0.2f * lin, 0.2f * lin, 0.2f * lin);
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.constant"), 1.0f);
-		glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.linear"), 0.3f);
-		glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.quadratic"), 0.7f);
+		glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.linear"), 0.09f);
+		glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.quadratic"), 0.032f);
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.cutOff"), glm::cos(glm::radians(12.0f)));
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.outerCutOff"), glm::cos(glm::radians(18.0f)));
 
@@ -963,11 +1130,15 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		pisoCementerio.Draw(lightingShader);
 		portonMarco.Draw(lightingShader);
-		cruzPanteon.Draw(lightingShader);
-		cruzMadera1.Draw(lightingShader);
-		cruzMadera2.Draw(lightingShader);
-		lapida1.Draw(lightingShader);
-		farol1.Draw(lightingShader);
+		// Estos modelos tienen su origen en (0, 0, 0) y se dibujaban todos ahí, en medio
+		// del atrio; antes no se veían porque el altar estaba encima. La lápida y la cruz
+		// pequeña ya se dibujan en sus tumbas (posLapidas / posCruces) más abajo.
+		// Para usar los demás, ponles su glm::translate como a las lápidas.
+		// cruzPanteon.Draw(lightingShader);
+		// cruzMadera1.Draw(lightingShader);
+		// cruzMadera2.Draw(lightingShader);
+		// lapida1.Draw(lightingShader);
+		// farol1.Draw(lightingShader);
 
 		for (int i = 0; i < 4; i++)
 		{
@@ -1000,16 +1171,20 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		portonDerecha.Draw(lightingShader);
 
+		// Ofrenda: centro de la explanada del atrio, más grande (posAltar, escalaAltar)
 		model = glm::mat4(1.0f);
-		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+		model = glm::translate(model, posAltar);
+		model = glm::scale(model, glm::vec3(escalaAltar));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		altar.Draw(lightingShader);
 
+		// Papel picado del altar: misma posición y escala que el altar
 		model = glm::mat4(1.0f);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+		model = glm::translate(model, posAltar);
+		model = glm::scale(model, glm::vec3(escalaAltar));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
 		papelPicadoAltar.Draw(lightingShader);
@@ -1160,13 +1335,20 @@ int main()
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, pointLightPositions[0]);
-		model = glm::scale(model, glm::vec3(0.2f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
+		// Cubo blanco de la luz de prueba (teclas T G Y H U J). Estaba en (0, 2, 0),
+		// escondido dentro del altar viejo; con el altar en su nuevo lugar quedaría
+		// flotando en medio del sendero, así que solo se dibuja si DIBUJAR_LAMPARA es true.
+		const bool DIBUJAR_LAMPARA = false;
+		if (DIBUJAR_LAMPARA)
+		{
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, pointLightPositions[0]);
+			model = glm::scale(model, glm::vec3(0.2f));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			glBindVertexArray(VAO);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+			glBindVertexArray(0);
+		}
 
 		// ---------------- SKYBOX (siempre al final de la escena) ----------------
 		glDepthFunc(GL_LEQUAL);   // el skybox queda a profundidad 1.0 y solo se pinta donde no hay geometria
@@ -1186,8 +1368,8 @@ int main()
 		// (glDepthMask false) pero sí respetan la de la escena: una barda las tapa.
 		lightingShader.Use();
 		modelLoc = glGetUniformLocation(lightingShader.Program, "model");
-		GLint ambienteLoc = glGetUniformLocation(lightingShader.Program, "dirLight.ambient");
-		glUniform3f(ambienteLoc, 1.6f, 1.6f, 1.6f);   // la llama brilla sola, no depende de la luna
+		GLint emisivoLoc = glGetUniformLocation(lightingShader.Program, "emisivo");
+		glUniform1i(emisivoLoc, 1);   // la llama brilla sola: no la oscurece la noche
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
 
 		glEnable(GL_BLEND);
@@ -1197,8 +1379,7 @@ int main()
 		{
 			if (distancia2(v.pos, posCam) > dMax2) continue;
 			// Parpadeo: dos senos con desfase propio para que cada vela titile distinto
-			float flick = 1.0f + 0.08f * sin(currentFrame * 12.0f + v.fase)
-				+ 0.04f * sin(currentFrame * 23.0f + 2.0f * v.fase);
+			float flick = parpadeoVela(v, currentFrame);   // mismo parpadeo que su luz
 			float vaiven = 4.0f * sin(currentFrame * 3.0f + v.fase);   // grados
 
 			glm::mat4 l = glm::translate(glm::mat4(1.0f), v.pos + glm::vec3(0.0f, v.sY, 0.0f));
@@ -1209,7 +1390,7 @@ int main()
 		}
 		glDepthMask(GL_TRUE);
 		glDisable(GL_BLEND);
-		glUniform3f(ambienteLoc, 0.6f, 0.6f, 0.6f);   // regresar la luz ambiente de la luna
+		glUniform1i(emisivoLoc, 0);
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 
 		glfwSwapBuffers(window);
@@ -1341,6 +1522,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	if (keys[GLFW_KEY_B])
 	{
 		dogAnim = 1;
+	}
+
+	if (key == GLFW_KEY_F && action == GLFW_PRESS)
+	{
+		linterna = !linterna;   // linterna de la cámara
 	}
 
 	if (key == GLFW_KEY_O && action == GLFW_PRESS)

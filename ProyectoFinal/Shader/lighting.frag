@@ -60,37 +60,98 @@ uniform SpotLight spotLight;
 uniform Material material;
 uniform int transparency;
 
+// =============================================================
+//  NOCHE Y LUZ DE VELAS  (Equipo 1 - Dia de Muertos)
+// =============================================================
+// 1) Mapa de luz de velas: textura vista desde arriba que guarda cuanta luz
+//    de TODAS las velas llega a cada punto del piso (se calcula una vez en main.cpp).
+uniform sampler2D mapaVelas;     // unidad de textura 5
+uniform vec2  mapaMin;           // esquina (x, z) del mapa en el mundo
+uniform float mapaTam;           // metros que cubre el mapa por lado
+uniform float alturaLuzVelas;    // a partir de esta altura ya no llega la luz del mapa
+
+// 2) Las velas mas cercanas a la camara como luces puntuales de verdad
+#define MAX_LUCES_VELA 16
+uniform int   numLucesVela;
+uniform vec3  luzVelaPos[MAX_LUCES_VELA];
+uniform float luzVelaInt[MAX_LUCES_VELA];
+
+uniform vec3  colorVela;         // naranja calido
+uniform float brilloVelas;       // intensidad general (con un parpadeo suave)
+
+// 3) Objetos que brillan solos (las llamas): no los afecta la noche
+uniform int emisivo;
+
+// 4) Niebla nocturna exponencial
+uniform vec3  colorNiebla;
+uniform float densidadNiebla;
+
 // Function prototypes
 vec3 CalcDirLight( DirLight light, vec3 normal, vec3 viewDir );
 vec3 CalcPointLight( PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir );
 vec3 CalcSpotLight( SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir );
 
+float factorNiebla( )
+{
+    float d = length( viewPos - FragPos );
+    return exp( -pow( densidadNiebla * d, 2.0 ) );   // 1 = sin niebla, 0 = solo niebla
+}
+
 void main( )
 {
+    vec4 tex = texture( material.diffuse, TexCoords );
+
+    // ---- Llamas: color de la textura, brillante, sin iluminacion ----
+    if ( emisivo == 1 )
+    {
+        if ( tex.a < 0.1 ) discard;
+        color = vec4( tex.rgb * 1.8 * factorNiebla( ), tex.a );
+        return;
+    }
+
     // Properties
     vec3 norm = normalize( Normal );
     if ( !gl_FrontFacing ) norm = -norm;   // papel picado: se ilumina igual por los dos lados
     vec3 viewDir = normalize( viewPos - FragPos );
-    
-    // Directional lighting
+    vec3 albedo = tex.rgb;
+
+    // Luz de luna (direccional, azulada y tenue: la pone main.cpp)
     vec3 result = CalcDirLight( dirLight, norm, viewDir );
-    
+
     // Point lights
     for ( int i = 0; i < NUMBER_OF_POINT_LIGHTS; i++ )
     {
         result += CalcPointLight( pointLights[i], norm, FragPos, viewDir );
     }
-    
-    // Spot light
-    result += CalcSpotLight( spotLight, norm, FragPos, viewDir );
- 	
-    // Antes: vec4(result, texture(...).rgb) -> el alfa salia del canal ROJO.
-    // Ahora el alfa es el canal A real del PNG (papel picado del altar y del panteon).
-    float alpha = texture( material.diffuse, TexCoords ).a;
-    color = vec4( result, alpha );
-	  if(color.a < 0.1 && transparency==1)
-        discard;
 
+    // Spot light (linterna, se prende con F)
+    result += CalcSpotLight( spotLight, norm, FragPos, viewDir );
+
+    // ---- Resplandor de todas las velas (mapa) ----
+    vec2  uv = ( FragPos.xz - mapaMin ) / mapaTam;
+    float resplandor = texture( mapaVelas, uv ).r;
+    float caidaAltura = clamp( 1.0 - FragPos.y / alturaLuzVelas, 0.0, 1.0 );
+    // las caras que miran hacia arriba reciben un poco mas que las verticales
+    float orientacion = 0.6 + 0.4 * max( norm.y, 0.0 );
+    result += colorVela * brilloVelas * resplandor * caidaAltura * orientacion * albedo;
+
+    // ---- Velas cercanas: luz puntual con direccion ----
+    for ( int i = 0; i < numLucesVela; i++ )
+    {
+        vec3  L   = luzVelaPos[i] - FragPos;
+        float d   = length( L );
+        L /= d;
+        float att = luzVelaInt[i] / ( 1.0 + 0.9 * d + 1.6 * d * d );
+        float dif = max( dot( norm, L ), 0.0 );
+        result += colorVela * att * dif * albedo;
+    }
+
+    // ---- Niebla ----
+    result = mix( colorNiebla, result, factorNiebla( ) );
+
+    color = vec4( result, tex.a );
+    if ( color.a < 0.1 && transparency == 1 )
+        discard;
 }
 
 // Calculates the color when using a directional light.
@@ -172,4 +233,4 @@ vec3 CalcSpotLight( SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir )
     specular *= attenuation * intensity;
     
     return ( ambient + diffuse + specular );
-}
+}
