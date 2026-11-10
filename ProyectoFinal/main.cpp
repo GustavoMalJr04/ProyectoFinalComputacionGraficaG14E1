@@ -26,6 +26,7 @@
 #include "Camera.h"
 #include "Model.h"
 #include "PapelPicado.h"   // PAPEL PICADO: tiras con ondulacion en el panteon
+#include "Texture.h"       // SKYBOX: TextureLoading::LoadCubemap
 
 // Function prototypes
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -98,6 +99,65 @@ float vertices[] = {
 		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
 	   -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
 	   -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+};
+
+// ---------------- SKYBOX ----------------
+GLfloat skyboxVertices[] = {
+	// Positions
+	-1.0f,  1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	-1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f
+};
+
+GLuint skyboxIndices[] =
+{
+	0,1,2,3,
+	4,5,6,7,
+	8,9,10,11,
+	12,13,14,15,
+	16,17,18,19,
+	20,21,22,23,
+	24,25,26,27,
+	28,29,30,31,
+	32,33,34,35
 };
 
 // Posición base del esqueleto en el mundo
@@ -215,6 +275,7 @@ int main()
 
 	Shader lightingShader("Shader/lighting.vs", "Shader/lighting.frag");
 	Shader lampShader("Shader/lamp.vs", "Shader/lamp.frag");
+	Shader SkyBoxshader("Shader/SkyBox.vs", "Shader/SkyBox.frag");
 
 	// Modelos
 	Model skeleton((char*)"assets/models/skeleton/skeleton.obj");
@@ -271,6 +332,35 @@ int main()
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+
+	// ---------------- SKYBOX: VAO, VBO, EBO ----------------
+	GLuint skyboxVAO, skyboxVBO, skyboxEBO;
+	glGenVertexArrays(1, &skyboxVAO);
+	glGenBuffers(1, &skyboxVBO);
+	glGenBuffers(1, &skyboxEBO);
+	glBindVertexArray(skyboxVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), &skyboxIndices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glBindVertexArray(0);
+
+	// ---------------- SKYBOX: texturas (orden +X, -X, +Y, -Y, +Z, -Z) ----------------
+	std::vector<const GLchar*> faces;
+	faces.push_back("assets/textures/sky_right.png");
+	faces.push_back("assets/textures/sky_left.png");
+	faces.push_back("assets/textures/sky_top.png");
+	faces.push_back("assets/textures/sky_bottom.png");
+	faces.push_back("assets/textures/sky_front.png");
+	faces.push_back("assets/textures/sky_back.png");
+
+	stbi_set_flip_vertically_on_load(false);   // los cubemaps NO se voltean
+	GLuint cubemapTexture = TextureLoading::LoadCubemap(faces);
+
+	SkyBoxshader.Use();
+	glUniform1i(glGetUniformLocation(SkyBoxshader.Program, "skybox"), 0);
 
 	lightingShader.Use();
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "material.diffuse"), 0);
@@ -571,8 +661,27 @@ int main()
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glBindVertexArray(0);
 
+		// ---------------- SKYBOX (siempre al final de la escena) ----------------
+		glDepthFunc(GL_LEQUAL);   // el skybox queda a profundidad 1.0 y solo se pinta donde no hay geometria
+		SkyBoxshader.Use();
+		glm::mat4 skyView = glm::mat4(glm::mat3(camera.GetViewMatrix()));   // sin traslacion: el cielo sigue a la camara
+		glUniformMatrix4fv(glGetUniformLocation(SkyBoxshader.Program, "view"), 1, GL_FALSE, glm::value_ptr(skyView));
+		glUniformMatrix4fv(glGetUniformLocation(SkyBoxshader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glBindVertexArray(skyboxVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glDepthFunc(GL_LESS);     // regresar al valor normal
+
 		glfwSwapBuffers(window);
 	}
+
+	// Liberar recursos del skybox
+	glDeleteVertexArrays(1, &skyboxVAO);
+	glDeleteBuffers(1, &skyboxVBO);
+	glDeleteBuffers(1, &skyboxEBO);
+	glDeleteTextures(1, &cubemapTexture);
 
 	// Detener y cerrar la música de fondo al salir
 	mciSendString(TEXT("close musicaFondo"), NULL, 0, NULL);
