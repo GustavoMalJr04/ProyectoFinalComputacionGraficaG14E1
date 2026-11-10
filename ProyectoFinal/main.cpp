@@ -1,5 +1,10 @@
 ﻿#include <iostream>
 #include <cmath>
+#include <vector>
+#include <random>
+#include <fstream>
+#include <sstream>
+#include <string>
 #include <windows.h>
 #pragma comment(lib, "winmm.lib")
 
@@ -185,6 +190,385 @@ glm::vec3 posCruces[2] = {
 	glm::vec3(37.62f, 0.40f, 12.95f)
 };
 
+// ---------------- SENDERO DE CEMPASUCHIL (ofrenda -> tumbas) ----------------
+// Montículos de tierra medidos de piso_panteon.obj: x0, x1, z0, z1
+struct Tumba { float x0, x1, z0, z1; };
+Tumba tumbas[6] = {
+	{ 26.22f, 27.98f, -28.06f, -23.06f },   // lápida (27.11, -27.81)
+	{ 36.78f, 38.53f, -28.06f, -23.06f },   // lápida (37.66, -27.81)
+	{ 26.26f, 28.01f,  -8.22f,  -3.22f },   // lápida (27.14,  -7.97)
+	{ 36.81f, 38.56f,  -8.00f,  -3.00f },   // lápida (37.68,  -7.75)
+	{ 26.22f, 27.97f,  12.12f,  17.12f },   // cruz   (27.10,  12.87)
+	{ 36.74f, 38.49f,  12.20f,  17.20f }    // cruz   (37.62,  12.95)
+};
+const float xPasillo = 32.3f;   // pasillo central del panteón, alineado con el portón
+
+std::vector<glm::mat4> matPetalos;     // una matriz por cada quad de pétalos
+std::vector<glm::mat4> matFlores;      // una matriz por cada flor
+std::vector<glm::vec3> centrosPetalos;
+std::mt19937 rngAdornos(2026);         // semilla fija: el sendero sale igual en cada ejecución
+
+float azar(float a, float b)
+{
+	return std::uniform_real_distribution<float>(a, b)(rngAdornos);
+}
+
+// ---------------- ALTURA DEL PISO DEL PANTEON ----------------
+// El piso del panteón no es plano: cada tumba tiene un montículo cuyas faldas
+// se extienden varios metros. Para que flores y pétalos no queden enterrados se
+// lee piso_panteon.obj y se busca la altura real del piso en (x, z).
+struct TrianguloPiso { glm::vec3 a, b, c; };
+std::vector<TrianguloPiso> trianguloPiso;
+
+void cargarPisoPanteon(const char* ruta)
+{
+	std::ifstream archivo(ruta);
+	if (!archivo)
+	{
+		std::cout << "ERROR::SENDERO no se encontro " << ruta << " (las flores quedan en y = 0)" << std::endl;
+		return;
+	}
+	std::vector<glm::vec3> v;
+	std::string linea;
+	while (std::getline(archivo, linea))
+	{
+		if (linea.size() > 2 && linea[0] == 'v' && linea[1] == ' ')
+		{
+			std::istringstream s(linea.substr(2));
+			glm::vec3 p;
+			s >> p.x >> p.y >> p.z;
+			v.push_back(p);
+		}
+		else if (linea.size() > 2 && linea[0] == 'f' && linea[1] == ' ')
+		{
+			std::istringstream s(linea.substr(2));
+			std::string tok;
+			std::vector<int> idx;
+			while (s >> tok)
+			{
+				int i = std::stoi(tok.substr(0, tok.find('/')));
+				idx.push_back(i > 0 ? i - 1 : (int)v.size() + i);
+			}
+			for (size_t k = 1; k + 1 < idx.size(); k++)
+			{
+				TrianguloPiso t;
+				t.a = v[idx[0]];  t.b = v[idx[k]];  t.c = v[idx[k + 1]];
+				trianguloPiso.push_back(t);
+			}
+		}
+	}
+}
+
+// Altura del piso en (x, z). Fuera del panteón regresa 0 (atrio y corredor son planos).
+// Si se pasa 'normal', ahí se guarda la inclinación del piso en ese punto.
+float alturaPiso(float x, float z, glm::vec3* normal = nullptr)
+{
+	float mejor = 0.0f;
+	bool hay = false;
+	glm::vec3 nMejor(0.0f, 1.0f, 0.0f);
+	for (const TrianguloPiso& t : trianguloPiso)
+	{
+		float d = (t.b.z - t.c.z) * (t.a.x - t.c.x) + (t.c.x - t.b.x) * (t.a.z - t.c.z);
+		if (fabs(d) < 1e-9f) continue;
+		float l1 = ((t.b.z - t.c.z) * (x - t.c.x) + (t.c.x - t.b.x) * (z - t.c.z)) / d;
+		float l2 = ((t.c.z - t.a.z) * (x - t.c.x) + (t.a.x - t.c.x) * (z - t.c.z)) / d;
+		float l3 = 1.0f - l1 - l2;
+		if (l1 < -1e-4f || l2 < -1e-4f || l3 < -1e-4f) continue;
+		float y = l1 * t.a.y + l2 * t.b.y + l3 * t.c.y;
+		if (!hay || y > mejor)
+		{
+			mejor = y;
+			hay = true;
+			nMejor = glm::normalize(glm::cross(t.b - t.a, t.c - t.a));
+			if (nMejor.y < 0.0f) nMejor = -nMejor;
+		}
+	}
+	if (normal) *normal = nMejor;
+	return mejor;
+}
+
+// Gira la matriz para que el eje Y del modelo apunte hacia 'n'
+glm::mat4 alinearY(glm::mat4 m, glm::vec3 n)
+{
+	n = glm::normalize(n);
+	float c = glm::dot(glm::vec3(0.0f, 1.0f, 0.0f), n);
+	if (c > 0.9999f) return m;
+	if (c < -0.9999f) return glm::rotate(m, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	glm::vec3 eje = glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), n));
+	return glm::rotate(m, acos(c), eje);
+}
+
+// Flor parada en el piso. Toma la altura más alta bajo la flor para que en
+// las faldas de los montículos no se entierre de un lado.
+void agregarFlor(glm::vec3 p, float escala = 0.28f)
+{
+	float r = 0.45f * escala;
+	float y = alturaPiso(p.x, p.z);
+	y = glm::max(y, alturaPiso(p.x + r, p.z));
+	y = glm::max(y, alturaPiso(p.x - r, p.z));
+	y = glm::max(y, alturaPiso(p.x, p.z + r));
+	y = glm::max(y, alturaPiso(p.x, p.z - r));
+
+	glm::mat4 m(1.0f);
+	m = glm::translate(m, glm::vec3(p.x, y, p.z));
+	m = glm::rotate(m, glm::radians(azar(0.0f, 360.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
+	m = glm::rotate(m, glm::radians(azar(-8.0f, 8.0f)), glm::vec3(1.0f, 0.0f, 0.0f));
+	m = glm::scale(m, glm::vec3(escala * azar(0.8f, 1.2f)));
+	matFlores.push_back(m);
+}
+
+// Flor pegada a una pared (o encima de algo), con su eje Y mirando hacia 'normal'
+void agregarFlorPared(glm::vec3 p, glm::vec3 normal, float escala = 0.4f)
+{
+	glm::mat4 m(1.0f);
+	m = glm::translate(m, p);
+	m = alinearY(m, normal);
+	m = glm::rotate(m, glm::radians(azar(0.0f, 360.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
+	m = glm::scale(m, glm::vec3(escala * azar(0.9f, 1.1f)));
+	matFlores.push_back(m);
+}
+
+// Tramo recto de pétalos de A a B, con flores en las dos orillas
+void agregarTramo(glm::vec3 a, glm::vec3 b)
+{
+	const float paso = 0.35f, dispersion = 0.35f, pasoFlor = 1.5f, orilla = 1.0f;
+	glm::vec3 d = b - a;  d.y = 0.0f;
+	float largo = glm::length(d);
+	glm::vec3 dir = d / largo;
+	glm::vec3 lado = glm::normalize(glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+	int n = (int)(largo / paso);
+	for (int i = 0; i <= n; i++)
+	{
+		glm::vec3 p = a + dir * (i * paso) + lado * azar(-dispersion, dispersion);
+		glm::vec3 nPiso;
+		p.y = alturaPiso(p.x, p.z, &nPiso)
+			+ 0.012f + 0.002f * (float)(matPetalos.size() % 8);   // capas: evita z-fighting
+		glm::mat4 m(1.0f);
+		m = glm::translate(m, p);
+		m = alinearY(m, nPiso);                                  // el tapete se recarga en la falda del montículo
+		m = glm::rotate(m, glm::radians(azar(0.0f, 360.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
+		m = glm::scale(m, glm::vec3(azar(0.9f, 1.2f), 1.0f, azar(0.9f, 1.2f)));
+		matPetalos.push_back(m);
+		centrosPetalos.push_back(p);
+	}
+	for (float s = pasoFlor * 0.5f; s < largo; s += pasoFlor)
+	{
+		agregarFlor(a + dir * s + lado * (orilla + azar(-0.05f, 0.05f)));
+		agregarFlor(a + dir * s - lado * (orilla + azar(-0.05f, 0.05f)));
+	}
+}
+
+// Marco de 10 flores alrededor del montículo de una tumba, como las tumbas
+// adornadas del Día de Muertos:
+//   4 esquinas + 1 a la mitad de cada lado corto + 2 en cada lado largo = 10
+void agregarContornoTumba(const Tumba& t)
+{
+	const float sep = 0.25f;     // qué tan afuera del montículo queda el marco
+	const float escala = 0.45f;  // más grandes que las del sendero para que el marco se note
+	float x0 = t.x0 - sep, x1 = t.x1 + sep, z0 = t.z0 - sep, z1 = t.z1 + sep;
+	float xm = (x0 + x1) * 0.5f;
+	float largo = z1 - z0;
+
+	// 4 esquinas
+	agregarFlor(glm::vec3(x0, 0.0f, z0), escala);
+	agregarFlor(glm::vec3(x1, 0.0f, z0), escala);
+	agregarFlor(glm::vec3(x0, 0.0f, z1), escala);
+	agregarFlor(glm::vec3(x1, 0.0f, z1), escala);
+	// mitad de los lados cortos (cabecera junto a la lápida y pie)
+	agregarFlor(glm::vec3(xm, 0.0f, z0), escala);
+	agregarFlor(glm::vec3(xm, 0.0f, z1), escala);
+	// 2 en cada lado largo, a un tercio y dos tercios
+	for (int k = 1; k <= 2; k++)
+	{
+		float z = z0 + largo * k / 3.0f;
+		agregarFlor(glm::vec3(x0, 0.0f, z), escala);
+		agregarFlor(glm::vec3(x1, 0.0f, z), escala);
+	}
+}
+
+// Quita las flores que quedaron encima del camino (cruces, ramales, frente del altar)
+void quitarFloresSobreSendero(float radio = 0.55f)
+{
+	std::vector<glm::mat4> quedan;
+	for (const glm::mat4& f : matFlores)
+	{
+		glm::vec2 pf(f[3].x, f[3].z);
+		bool estorba = false;
+		for (const glm::vec3& p : centrosPetalos)
+			if (glm::length(pf - glm::vec2(p.x, p.z)) < radio) { estorba = true; break; }
+		if (!estorba) quedan.push_back(f);
+	}
+	matFlores = quedan;
+}
+
+// ---------------- FLORES EN EL ARCO DE ENTRADA ----------------
+// atrio_arco_entrada.obj se dibuja en (-20, -0.25, 50). Hueco del arco (coordenadas locales):
+// lados rectos en x = ±2.5 de y = 0 a 4, y medio círculo de centro (0, 4) y radio 2.5 (cima en 6.5).
+// El arco mide 0.5 de grueso (caras en z = ±0.25).
+const glm::vec3 posArco(-20.0f, -0.25f, 50.0f);
+
+// Una flor cada metro siguiendo el contorno del hueco, en las dos caras del arco
+void agregarFloresArco()
+{
+	const float semiAncho = 2.5f, yRecto = 4.0f, radio = 2.5f;
+	const float separacion = 0.3f;   // qué tan afuera del borde del hueco quedan las flores
+	const float r = radio + separacion;
+	const float xLado = semiAncho + separacion;
+	const float yInicio = 0.5f;      // primera flor a medio metro del suelo
+	const float paso = 1.0f;         // una flor por metro
+
+	const float largoRecto = yRecto - yInicio;
+	const float largoCurva = 3.14159265f * r;
+	const float total = 2.0f * largoRecto + largoCurva;
+
+	for (float s = 0.0f; s <= total + 0.01f; s += paso)
+	{
+		glm::vec3 local;
+		if (s < largoRecto)                                   // lado izquierdo, subiendo
+			local = glm::vec3(-xLado, yInicio + s, 0.0f);
+		else if (s < largoRecto + largoCurva)                 // medio círculo, de izquierda a derecha
+		{
+			float ang = 3.14159265f * (1.0f - (s - largoRecto) / largoCurva);
+			local = glm::vec3(r * cos(ang), yRecto + r * sin(ang), 0.0f);
+		}
+		else                                                  // lado derecho, bajando
+			local = glm::vec3(xLado, yRecto - (s - largoRecto - largoCurva), 0.0f);
+
+		agregarFlorPared(posArco + local + glm::vec3(0.0f, 0.0f, 0.26f), glm::vec3(0.0f, 0.0f, 1.0f));    // cara de afuera (+Z)
+		agregarFlorPared(posArco + local + glm::vec3(0.0f, 0.0f, -0.26f), glm::vec3(0.0f, 0.0f, -1.0f));  // cara del atrio (-Z)
+	}
+}
+
+// ---------------- FLORES EN EL PERIMETRO DEL PANTEON ----------------
+// Caras interiores de barda_panteon.obj (model = identidad):
+//   oeste x = 15.25 (hueco del corredor z = -5..5), este x = 49.75,
+//   norte z = -49.75, sur z = 49.75 (portón entre x = 29.9 y 34.7).
+// Arriate al pie de la barda de A a B: dos hileras en zigzag, una flor cada 1.2 m.
+void agregarFloresBarda(glm::vec3 a, glm::vec3 b, glm::vec3 adentro)
+{
+	const float paso = 1.2f;
+	glm::vec3 d = b - a;
+	float largo = glm::length(d);
+	glm::vec3 dir = d / largo;
+	int i = 0;
+	for (float s = 0.4f; s < largo - 0.3f; s += paso, i++)
+	{
+		float fondo = (i % 2 == 0) ? 0.45f : 0.85f;
+		agregarFlor(a + dir * (s + azar(-0.15f, 0.15f)) + adentro * fondo, 0.34f);
+	}
+}
+
+void agregarFloresPerimetroPanteon()
+{
+	const glm::vec3 masX(1.0f, 0.0f, 0.0f), menosX(-1.0f, 0.0f, 0.0f);
+	const glm::vec3 masZ(0.0f, 0.0f, 1.0f), menosZ(0.0f, 0.0f, -1.0f);
+
+	// Barda oeste (dos tramos, sin tapar el corredor)
+	agregarFloresBarda(glm::vec3(15.25f, 0.0f, -49.75f), glm::vec3(15.25f, 0.0f, -5.5f), masX);
+	agregarFloresBarda(glm::vec3(15.25f, 0.0f, 5.5f), glm::vec3(15.25f, 0.0f, 49.75f), masX);
+	// Barda este
+	agregarFloresBarda(glm::vec3(49.75f, 0.0f, -49.75f), glm::vec3(49.75f, 0.0f, 49.75f), menosX);
+	// Barda norte
+	agregarFloresBarda(glm::vec3(15.25f, 0.0f, -49.75f), glm::vec3(49.75f, 0.0f, -49.75f), masZ);
+	// Barda sur, dejando libre el portón y los arriates de la entrada
+	agregarFloresBarda(glm::vec3(15.25f, 0.0f, 49.75f), glm::vec3(27.3f, 0.0f, 49.75f), menosZ);
+	agregarFloresBarda(glm::vec3(37.3f, 0.0f, 49.75f), glm::vec3(49.75f, 0.0f, 49.75f), menosZ);
+}
+
+// ---------------- FLORES EN LAS ENTRADAS DEL PANTEON ----------------
+// Portón (barda sur): pilares de x = 29.9..30.7 y 33.9..34.7, alto 3.25,
+// caras en z = 49.65 (adentro) y 50.35 (afuera). Hojas del portón entre 30.7 y 33.9.
+// Corredor (barda oeste): hueco z = -5..5; la barda del panteón tiene su cara
+// interior en x = 15.25 y la del atrio su cara en x = 9.75.
+void agregarFloresEntradas()
+{
+	// Arriates a los dos lados del portón, por dentro: 3 hileras densas
+	for (int fila = 0; fila < 3; fila++)
+	{
+		float z = 49.25f - fila * 0.45f;
+		float desfase = (fila % 2) * 0.22f;
+		for (float x = 27.5f + desfase; x <= 29.7f; x += 0.45f) agregarFlor(glm::vec3(x, 0.0f, z), 0.38f);
+		for (float x = 34.9f + desfase; x <= 37.1f; x += 0.45f) agregarFlor(glm::vec3(x, 0.0f, z), 0.38f);
+	}
+
+	// Pilares del portón: flores subiendo por las dos caras y una grande encima
+	const float xPilar[2] = { 30.3f, 34.3f };
+	for (int k = 0; k < 2; k++)
+	{
+		for (float y = 0.5f; y <= 2.9f; y += 0.6f)
+		{
+			agregarFlorPared(glm::vec3(xPilar[k], y, 50.36f), glm::vec3(0.0f, 0.0f, 1.0f), 0.38f);
+			agregarFlorPared(glm::vec3(xPilar[k], y, 49.64f), glm::vec3(0.0f, 0.0f, -1.0f), 0.38f);
+		}
+		agregarFlorPared(glm::vec3(xPilar[k], 3.25f, 50.0f), glm::vec3(0.0f, 1.0f, 0.0f), 0.6f);
+	}
+
+	// Entrada por el corredor: flores subiendo a los dos lados del hueco,
+	// del lado del panteón (mirando a +X) y del lado del atrio (mirando a -X)
+	const float zLado[2] = { -5.4f, 5.4f };
+	for (int k = 0; k < 2; k++)
+		for (float y = 0.5f; y <= 2.6f; y += 0.5f)
+		{
+			agregarFlorPared(glm::vec3(15.26f, y, zLado[k]), glm::vec3(1.0f, 0.0f, 0.0f), 0.35f);
+			agregarFlorPared(glm::vec3(9.74f, y, zLado[k]), glm::vec3(-1.0f, 0.0f, 0.0f), 0.35f);
+		}
+}
+
+void construirSendero()
+{
+	// 0. Leer el piso del panteón para conocer su altura (montículos de las tumbas)
+	cargarPisoPanteon("assets/models/edificacion/piso_panteon.obj");
+
+	// 1. Frente de la ofrenda -> corredor -> pasillo central del panteón
+	glm::vec3 ruta[] = {
+		glm::vec3(0.0f, 0.0f, 2.6f),  glm::vec3(5.0f, 0.0f, 2.2f),
+		glm::vec3(9.0f, 0.0f, 0.3f),  glm::vec3(15.0f, 0.0f, 0.0f),
+		glm::vec3(24.0f, 0.0f, 0.0f), glm::vec3(xPasillo, 0.0f, 0.0f)
+	};
+	for (int i = 0; i < 5; i++) agregarTramo(ruta[i], ruta[i + 1]);
+
+	// 2. Pasillo central hacia las tumbas de los dos lados
+	agregarTramo(glm::vec3(xPasillo, 0.0f, 0.0f), glm::vec3(xPasillo, 0.0f, -25.56f));
+	agregarTramo(glm::vec3(xPasillo, 0.0f, 0.0f), glm::vec3(xPasillo, 0.0f, 14.66f));
+	// ...y sigue hasta el portón, para que la entrada principal también tenga tapete
+	agregarTramo(glm::vec3(xPasillo, 0.0f, 14.66f), glm::vec3(xPasillo, 0.0f, 49.2f));
+
+	// 3. Un ramal a cada tumba (llega a 0.6 m del montículo)
+	for (const Tumba& t : tumbas)
+	{
+		float zc = (t.z0 + t.z1) * 0.5f;
+		float xFin = (t.x1 < xPasillo) ? t.x1 + 0.6f : t.x0 - 0.6f;
+		agregarTramo(glm::vec3(xPasillo, 0.0f, zc), glm::vec3(xFin, 0.0f, zc));
+	}
+
+	// 4. Flores a los lados y al frente de la ofrenda (altar: x -2..2, z -0.7..1.9)
+	for (float z = -0.6f; z <= 2.0f; z += 0.45f)
+	{
+		agregarFlor(glm::vec3(-2.35f, 0.0f, z));
+		agregarFlor(glm::vec3(2.35f, 0.0f, z));
+	}
+	for (float x = -2.0f; x <= 2.01f; x += 0.45f)
+		agregarFlor(glm::vec3(x, 0.0f, 2.3f));
+
+	// 5. Arriates al pie de toda la barda del panteón
+	agregarFloresPerimetroPanteon();
+
+	quitarFloresSobreSendero();
+
+	// 6. Marco de 10 flores en cada una de las 6 tumbas (después de la limpieza
+	//    para que siempre queden las 10 completas, aunque toquen el ramal)
+	for (const Tumba& t : tumbas)
+		agregarContornoTumba(t);
+
+	// 7. Flores en el arco del atrio y en las dos entradas del panteón
+	agregarFloresArco();
+	agregarFloresEntradas();
+
+	std::cout << "Sendero: " << matPetalos.size() << " quads de petalos, "
+		<< matFlores.size() << " flores" << std::endl;
+}
+
 glm::vec3 Light1 = glm::vec3(0);
 
 //Animacion del Esqueleto
@@ -316,11 +700,46 @@ int main()
 	Model avenida((char*)"assets/models/edificacion/avenida.obj");
 	Model bosque((char*)"assets/models/edificacion/bosque.obj");
 	Model cesped((char*)"assets/models/edificacion/cesped.obj");
+	Model cempasuchil((char*)"assets/models/edificacion/cempasuchil.obj");
+	Model senderoPetalos((char*)"assets/models/edificacion/sendero_petalos.obj");
 
 	glm::mat4 modeloBardas = glm::mat4(1.0f);
 	PapelPicado papelPicado;
 	papelPicado.cargar("Imagenes");
-	papelPicado.colocarEnPanteon(modeloBardas);
+	// Altura de amarre de TODOS los cordones. Las bardas miden 2.75; antes se amarraban
+	// a 2.76 y las banderitas quedaban muy bajas. Súbelo o bájalo aquí.
+	const float yAmarrePapel = 3.5f;
+
+	// ---------------- PAPEL PICADO EN EL PANTEON ----------------
+	// Mismas tiras que papelPicado.colocarEnPanteon() (PapelPicado.h), pero a yAmarrePapel.
+	// Barda oeste x = 15.0, barda este x = 50.0; se salta z = -5..5 (corredor) y los árboles.
+	{
+		const float zsPanteon[] = { -36.0f, -19.5f, 7.5f, 27.0f, 45.0f };
+		const float caidasPanteon[] = { 0.15f, 0.14f, 0.14f, 0.16f, 0.15f };
+		for (int k = 0; k < 5; k++)
+		{
+			glm::vec3 a = glm::vec3(modeloBardas * glm::vec4(15.0f, yAmarrePapel, zsPanteon[k], 1.0f));
+			glm::vec3 b = glm::vec3(modeloBardas * glm::vec4(50.0f, yAmarrePapel, zsPanteon[k], 1.0f));
+			papelPicado.agregarTira(a, b, caidasPanteon[k], 0.55f);
+		}
+	}
+
+	// ---------------- PAPEL PICADO EN EL ATRIO (frente a la iglesia) ----------------
+	// atrio_barda.obj (model = identidad): barda oeste x = -50.0, barda este x = 10.02.
+	// Cada par es (z en la barda oeste, z en la barda este). Algunas tiras van un poco
+	// diagonales para esquivar las copas de bosque.obj que asoman sobre las bardas
+	// y el hueco del corredor (z = -5..5 en la barda este).
+	const glm::vec2 tirasAtrio[] = {
+		glm::vec2(-11.5f, -10.5f),   // la más cercana a la fachada (z = -13.4)
+		glm::vec2(14.0f,  11.0f),
+		glm::vec2(27.0f,  29.5f),
+		glm::vec2(46.5f,  46.5f)    // junto al arco de entrada
+	};
+	for (const glm::vec2& t : tirasAtrio)
+		papelPicado.agregarTira(glm::vec3(-50.0f, yAmarrePapel, t.x), glm::vec3(10.02f, yAmarrePapel, t.y), 0.15f, 0.55f);
+
+	// ---------------- SENDERO DE CEMPASUCHIL ----------------
+	construirSendero();
 
 	GLuint VBO, VAO;
 	glGenVertexArrays(1, &VAO);
@@ -540,6 +959,21 @@ int main()
 		papelPicadoAltar.Draw(lightingShader);
 		glDisable(GL_BLEND);
 		glBindVertexArray(0);
+
+		// ---------------- SENDERO DE CEMPASUCHIL ----------------
+		GLint transpLoc = glGetUniformLocation(lightingShader.Program, "transparency");
+		glUniform1i(transpLoc, 1);   // descarta el fondo transparente de petalos_sendero.png
+		for (const glm::mat4& m : matPetalos)
+		{
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+			senderoPetalos.Draw(lightingShader);
+		}
+		glUniform1i(transpLoc, 0);
+		for (const glm::mat4& m : matFlores)
+		{
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+			cempasuchil.Draw(lightingShader);
+		}
 
 		papelPicado.dibujar(lightingShader, currentFrame);
 

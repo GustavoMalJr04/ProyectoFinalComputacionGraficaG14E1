@@ -1,0 +1,27 @@
+# Materiales vela - Equipo 1
+newmtl cera
+Ka 0.2 0.2 0.2
+Kd 1.0 1.0 1.0
+Ks 0.15 0.15 0.15
+Ns 20
+d 1.0
+illum 2
+map_Kd ../../textures/cera_cirio.png
+
+newmtl mecha
+Ka 0.02 0.02 0.02
+Kd 0.08 0.06 0.05
+Ks 0.0 0.0 0.0
+Ns 1
+d 1.0
+illum 1
+
+newmtl llama
+Ka 1.0 1.0 1.0
+Kd 1.0 1.0 1.0
+Ke 1.0 0.6 0.2
+Ks 0.0 0.0 0.0
+d 1.0
+illum 0
+map_Kd ../../textures/llama.png
+map_d l../../textures/lama.png
