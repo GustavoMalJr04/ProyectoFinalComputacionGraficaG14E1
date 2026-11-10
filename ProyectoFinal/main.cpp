@@ -1,5 +1,7 @@
 ﻿#include <iostream>
 #include <cmath>
+#include <windows.h>
+#pragma comment(lib, "winmm.lib")
 
 /// GLEW
 #include <GL/glew.h>
@@ -97,33 +99,29 @@ float vertices[] = {
 	   -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 };
 
-// Posici�n base del esqueleto en el mundo
-glm::vec3 skeletonPos(1.5f, 0.0f, 0.0f);
+// Posición base del esqueleto en el mundo
+glm::vec3 skeletonPos(-25.0f, 0.0f, 55.0f);
+float skeletonYaw = 0.0f; // Ángulo de orientación guiado por el mouse/cámara
 
 // ---------------- PORTON DEL PANTEON ----------------
-// Las hojas (porton_izq.obj / porton_der.obj) tienen el origen en la bisagra: ese es su pivote.
-glm::vec3 portonCentro(32.3f, 0.0f, 50.0f); // centro del hueco del marco (ajustar si no encaja)
-float portonRotY = 0.0f;    // orientacion del porton respecto a la barda
-float portonAncho = 1.57f;   // ancho de una hoja (sale del .obj)
-float anguloPorton = 0.0f;   // angulo actual: 0 = cerrado
-float anguloMax = 90.0f;     // angulo abierto
-float velPorton = 60.0f;     // grados por segundo
-bool  abrirPorton = false;   // se cambia con la tecla O
+glm::vec3 portonCentro(32.3f, 0.0f, 50.0f);
+float portonRotY = 0.0f;
+float portonAncho = 1.57f;
+float anguloPorton = 0.0f;
+float anguloMax = 90.0f;
+float velPorton = 60.0f;
+bool  abrirPorton = false;
 
 // ---------------- TUMBAS DEL PANTEON ----------------
-// Los 6 monticulos ya vienen modelados dentro de piso_panteon.obj.
-// lapida.obj y cruz_pequena.obj tienen su origen en la base (centro), asi que
-// basta trasladarlas a la cabecera (+Z) de cada monticulo, sobre su altura.
-// x = centro del monticulo, y = altura de la cima, z = cabecera (borde +Z de la cima - 0.25)
 glm::vec3 posLapidas[4] = {
-	glm::vec3(37.66f, 0.29f, -27.81f),   // monticulo fondo-este
-	glm::vec3(27.11f, 0.36f, -27.81f),   // monticulo fondo-oeste
-	glm::vec3(27.14f, 0.35f,  -7.97f),   // monticulo centro-oeste
-	glm::vec3(37.68f, 0.25f,  -7.75f)    // monticulo centro-este
+	glm::vec3(37.66f, 0.29f, -27.81f),
+	glm::vec3(27.11f, 0.36f, -27.81f),
+	glm::vec3(27.14f, 0.35f,  -7.97f),
+	glm::vec3(37.68f, 0.25f,  -7.75f)
 };
 glm::vec3 posCruces[2] = {
-	glm::vec3(27.10f, 0.14f, 12.87f),    // monticulo entrada-oeste (y un poco enterrada)
-	glm::vec3(37.62f, 0.40f, 12.95f)     // monticulo entrada-este
+	glm::vec3(27.10f, 0.14f, 12.87f),
+	glm::vec3(37.62f, 0.40f, 12.95f)
 };
 
 glm::vec3 Light1 = glm::vec3(0);
@@ -132,10 +130,10 @@ glm::vec3 Light1 = glm::vec3(0);
 float skelWalkCycle = 0.0f;
 bool isWalking = false;
 
-//Amgulos individuales para las articulaciones del esqueleto
 float skelArmAngle = 0.0f;
 float skelLegAngle = 0.0f;
 float skelForearmAngle = 0.0f;
+float skelKneeAngle = 0.0f; // Flexión de rodillas independiente de los brazos
 
 float rotBall = 0.0f;
 bool AnimBall = false;
@@ -160,7 +158,6 @@ struct BoundingBox {
 	float minZ, maxZ;
 };
 
-//Lista de paredes invisibles
 std::vector<BoundingBox> invisibleWalls = {
 	{  -120.0f, 120.0f, 80.0f, 85.0f },
 	{  -65.0f, -60.0f, -80.0f, 80.0f },
@@ -171,7 +168,6 @@ std::vector<BoundingBox> invisibleWalls = {
 
 bool CheckCollision(glm::vec3 pos)
 {
-	// Margen de radio del esqueleto (para que no choque "exactamente" en el centro del pivote)
 	float skeletonRadius = 0.5f;
 
 	for (const auto& wall : invisibleWalls)
@@ -179,18 +175,16 @@ bool CheckCollision(glm::vec3 pos)
 		if (pos.x + skeletonRadius >= wall.minX && pos.x - skeletonRadius <= wall.maxX &&
 			pos.z + skeletonRadius >= wall.minZ && pos.z - skeletonRadius <= wall.maxZ)
 		{
-			return true; // �Hubo colisi�n!
+			return true;
 		}
 	}
-	return false; // Libre de obst�culos
+	return false;
 }
 
 int main()
 {
-	// Init GLFW
 	glfwInit();
 
-	// Create a GLFWwindow object that we can use for GLFW's functions
 	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto Dia de Muertos", nullptr, nullptr);
 
 	if (nullptr == window)
@@ -203,11 +197,9 @@ int main()
 	glfwMakeContextCurrent(window);
 	glfwGetFramebufferSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
 
-	// Set the required callback functions
 	glfwSetKeyCallback(window, KeyCallback);
 	glfwSetCursorPosCallback(window, MouseCallback);
 
-	// Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
 	glewExperimental = GL_TRUE;
 	if (GLEW_OK != glewInit())
 	{
@@ -237,7 +229,7 @@ int main()
 	Model piernaDer((char*)"assets/models/skeleton/piernaDer.obj");
 	Model piernaIzq((char*)"assets/models/skeleton/piernaIzq.obj");
 
-	// ---------------- Edificacion (nombres nuevos) ----------------
+	// Edificación
 	Model arcoEntrada((char*)"assets/models/edificacion/atrio_arco_entrada.obj");
 	Model corredor((char*)"assets/models/edificacion/corredor_panteon.obj");
 	Model cruzMadera1((char*)"assets/models/edificacion/cruz_pequena.obj");
@@ -260,41 +252,34 @@ int main()
 	Model bosque((char*)"assets/models/edificacion/bosque.obj");
 	Model cesped((char*)"assets/models/edificacion/cesped.obj");
 
-	// ---------------- PAPEL PICADO ----------------
-	// 10 tiras de la barda oeste a la barda este del panteon (barda_panteon.obj),
-	// con los 8 colores Imagenes/pp_*.png intercalados. Ondulacion en Shader/lighting.vs.
-	glm::mat4 modeloBardas = glm::mat4(1.0f);   // MISMA matriz con la que se dibuja murosCementerio
+	glm::mat4 modeloBardas = glm::mat4(1.0f);
 	PapelPicado papelPicado;
 	papelPicado.cargar("Imagenes");
 	papelPicado.colocarEnPanteon(modeloBardas);
-	std::cout << "Papel picado: " << papelPicado.totalBanderas() << " banderitas, punta mas baja en y = "
-		<< papelPicado.puntaMasBaja() << std::endl;
 
-	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	// Position attribute
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
-	// normal attribute
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
-	// Set texture units
 	lightingShader.Use();
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "material.diffuse"), 0);
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "material.specular"), 1);
 
 	glm::mat4 projection = glm::perspective(camera.GetZoom(), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 0.1f, 100.0f);
 
-	// Game loop
+	// Abrir y reproducir el MP3 en bucle (repeat)
+	mciSendString(TEXT("open \"assets/audio/lloronaCancion.mp3\" type mpegvideo alias musicaFondo"), NULL, 0, NULL);
+	mciSendString(TEXT("play musicaFondo repeat"), NULL, 0, NULL);
+
 	while (!glfwWindowShouldClose(window))
 	{
-		// Calculate deltatime of current frame
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -303,10 +288,8 @@ int main()
 		DoMovement();
 		Animation();
 
-		// Sincronizar la c�mara con la posici�n del esqueleto
 		camera.SetPosition(skeletonPos + glm::vec3(0.0f, 2.0f, -0.5f));
 
-		// Clear the colorbuffer
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -314,7 +297,6 @@ int main()
 
 		glm::mat4 modelTemp = glm::mat4(1.0f);
 
-		// Use corresponding shader when setting uniforms/drawing objects
 		lightingShader.Use();
 
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "diffuse"), 0);
@@ -322,13 +304,11 @@ int main()
 		GLint viewPosLoc = glGetUniformLocation(lightingShader.Program, "viewPos");
 		glUniform3f(viewPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 
-		// Directional light
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.direction"), -0.2f, -1.0f, -0.3f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.ambient"), 0.6f, 0.6f, 0.6f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.diffuse"), 0.6f, 0.6f, 0.6f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.specular"), 0.3f, 0.3f, 0.3f);
 
-		// Point light 1
 		glm::vec3 lightColor;
 		lightColor.x = abs(sin(glfwGetTime() * Light1.x));
 		lightColor.y = abs(sin(glfwGetTime() * Light1.y));
@@ -342,7 +322,6 @@ int main()
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].linear"), 0.045f);
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].quadratic"), 0.075f);
 
-		// SpotLight
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.position"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.direction"), camera.GetFront().x, camera.GetFront().y, camera.GetFront().z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.ambient"), 0.2f, 0.2f, 0.8f);
@@ -356,7 +335,6 @@ int main()
 
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "material.shininess"), 5.0f);
 
-		// Create camera transformations
 		glm::mat4 view = camera.GetViewMatrix();
 
 		GLint modelLoc = glGetUniformLocation(lightingShader.Program, "model");
@@ -368,67 +346,52 @@ int main()
 
 		glm::mat4 model(1.0f);
 
-		// Dibujar Entorno / Edificaciones
+		// Dibujar Entorno
 		model = glm::mat4(1.0f);
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 		model = glm::translate(model, glm::vec3(-20.0f, -0.25f, 50.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		arcoEntrada.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 		model = glm::translate(model, glm::vec3(12.5f, 0.0f, 0.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		corredor.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 		model = glm::translate(model, glm::vec3(-20.0f, 0.0f, -30.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		iglesia.Draw(lightingShader);
 
-		model = modeloBardas;   // PAPEL PICADO: las tiras se amarran con esta misma matriz
+		model = modeloBardas;
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		murosCementerio.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		paredesPatio.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-20.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		pisoAdoquin.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -0.25f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		avenida.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		bosque.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -0.25f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		cesped.Draw(lightingShader);
 
-		//dibujar panteon 
 		model = glm::mat4(1.0f);
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		pisoCementerio.Draw(lightingShader);
 		portonMarco.Draw(lightingShader);
 		cruzPanteon.Draw(lightingShader);
@@ -437,7 +400,6 @@ int main()
 		lapida1.Draw(lightingShader);
 		farol1.Draw(lightingShader);
 
-		// ---- TUMBAS: 4 lapidas + 2 cruces pequenas en la cabecera de los monticulos ----
 		for (int i = 0; i < 4; i++)
 		{
 			model = glm::mat4(1.0f);
@@ -453,33 +415,28 @@ int main()
 			cruzMadera1.Draw(lightingShader);
 		}
 
-		// ---- Porton: cada hoja gira sobre su bisagra (pivote = origen del .obj) ----
 		glm::mat4 portonBase = glm::mat4(1.0f);
-		portonBase = glm::translate(portonBase, portonCentro);                                       // al hueco del marco
-		portonBase = glm::rotate(portonBase, glm::radians(portonRotY), glm::vec3(0.0f, 1.0f, 0.0f)); // orientado con la barda
+		portonBase = glm::translate(portonBase, portonCentro);
+		portonBase = glm::rotate(portonBase, glm::radians(portonRotY), glm::vec3(0.0f, 1.0f, 0.0f));
 
-		// Hoja izquierda: bisagra en -ancho, la hoja crece hacia +X hasta el centro
 		model = portonBase;
-		model = glm::translate(model, glm::vec3(-portonAncho, 0.0f, 0.0f));                  // pivote = bisagra
-		model = glm::rotate(model, glm::radians(anguloPorton), glm::vec3(0.0f, 1.0f, 0.0f)); // gira sobre el pivote
+		model = glm::translate(model, glm::vec3(-portonAncho, 0.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(anguloPorton), glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		portonIzquierda.Draw(lightingShader);
 
-		// Hoja derecha: bisagra en +ancho, gira al reves para abrir hacia el mismo lado
 		model = portonBase;
 		model = glm::translate(model, glm::vec3(portonAncho, 0.0f, 0.0f));
 		model = glm::rotate(model, glm::radians(-anguloPorton), glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		portonDerecha.Draw(lightingShader);
 
-		// Dibujar la estructura del altar (S�lida)
 		model = glm::mat4(1.0f);
 		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		altar.Draw(lightingShader);
 
-		// Dibujar el papel picado (Con transparencia y blending)
 		model = glm::mat4(1.0f);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -490,53 +447,107 @@ int main()
 		glDisable(GL_BLEND);
 		glBindVertexArray(0);
 
-		// PAPEL PICADO del panteon (despues de los objetos opacos).
-		// Prende y apaga solo "ondula" y "transparency"; deja el culling como estaba.
 		papelPicado.dibujar(lightingShader, currentFrame);
 
-		// Dibujar el Esqueleto usando su posici�n global `skeletonPos`
+
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, skeletonPos);
+		model = glm::rotate(model, glm::radians(skeletonYaw), glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 
 		modelTemp = model;
+
+		// 1. PECHO / TORSO
 		pecho.Draw(lightingShader);
 
+		// 2. CRÁNEO
 		model = modelTemp;
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		craneo.Draw(lightingShader);
 
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(skelArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		// 3. BRAZO DERECHO: rotación desde hombro y codo (no desde el origen del modelo)
+		const glm::vec3 hombroDer(-0.28f, 1.30f, 0.0f);
+		const glm::vec3 codoDer(-0.286f, 1.00f, -0.02f);
+		const glm::vec3 hombroIzq(0.28f, 1.30f, 0.0f);
+		const glm::vec3 codoIzq(0.286f, 1.00f, -0.02f);
+		const glm::vec3 caderaDer(-0.10f, 0.90f, 0.0f);
+		const glm::vec3 rodillaDer(-0.10f, 0.54f, -0.02f);
+		const glm::vec3 caderaIzq(0.10f, 0.90f, 0.0f);
+		const glm::vec3 rodillaIzq(0.10f, 0.54f, -0.02f);
+
+		// Hombro derecho
+		glm::mat4 brazoDerModel = modelTemp;
+		brazoDerModel = glm::translate(brazoDerModel, hombroDer);
+		brazoDerModel = glm::rotate(brazoDerModel, glm::radians(skelArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		brazoDerModel = glm::translate(brazoDerModel, -hombroDer);
+		model = brazoDerModel;
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		brazoDer.Draw(lightingShader);
 
+		// Codo derecho: el antebrazo hereda el movimiento del hombro
+		model = brazoDerModel;
+		model = glm::translate(model, codoDer);
+		model = glm::rotate(model, glm::radians(skelForearmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::translate(model, -codoDer);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		antebrazoDer.Draw(lightingShader);
 		manoDer.Draw(lightingShader);
 
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(-skelArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		// 4. BRAZO IZQUIERDO
+		glm::mat4 brazoIzqModel = modelTemp;
+		brazoIzqModel = glm::translate(brazoIzqModel, hombroIzq);
+		brazoIzqModel = glm::rotate(brazoIzqModel, glm::radians(-skelArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		brazoIzqModel = glm::translate(brazoIzqModel, -hombroIzq);
+		model = brazoIzqModel;
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		brazoIzq.Draw(lightingShader);
 
+		model = brazoIzqModel;
+		model = glm::translate(model, codoIzq);
+		model = glm::rotate(model, glm::radians(-skelForearmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::translate(model, -codoIzq);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		antebrazoIzq.Draw(lightingShader);
 		manoIzq.Draw(lightingShader);
 
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(-skelLegAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		// 5. PIERNA DERECHA: movimiento desde la cadera y flexión desde la rodilla
+		glm::mat4 piernaDerModel = modelTemp;
+		piernaDerModel = glm::translate(piernaDerModel, caderaDer);
+		piernaDerModel = glm::rotate(piernaDerModel, glm::radians(-skelLegAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		piernaDerModel = glm::translate(piernaDerModel, -caderaDer);
+		model = piernaDerModel;
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		femurDer.Draw(lightingShader);
+
+		model = piernaDerModel;
+		model = glm::translate(model, rodillaDer);
+		model = glm::rotate(model, glm::radians(skelKneeAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::translate(model, -rodillaDer);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		piernaDer.Draw(lightingShader);
 		pieDer.Draw(lightingShader);
 
-		model = modelTemp;
-		model = glm::rotate(model, glm::radians(skelLegAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		// 6. PIERNA IZQUIERDA
+		glm::mat4 piernaIzqModel = modelTemp;
+		piernaIzqModel = glm::translate(piernaIzqModel, caderaIzq);
+		piernaIzqModel = glm::rotate(piernaIzqModel, glm::radians(skelLegAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		piernaIzqModel = glm::translate(piernaIzqModel, -caderaIzq);
+		model = piernaIzqModel;
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		femurIzq.Draw(lightingShader);
+
+		model = piernaIzqModel;
+		model = glm::translate(model, rodillaIzq);
+		model = glm::rotate(model, glm::radians(-skelKneeAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::translate(model, -rodillaIzq);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		piernaIzq.Draw(lightingShader);
 		pieIzq.Draw(lightingShader);
 
+		// 7. ESQUELETO GENERAL BASE
 		model = modelTemp;
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		skeleton.Draw(lightingShader);
 
 		// Lamp object
@@ -559,6 +570,9 @@ int main()
 		glfwSwapBuffers(window);
 	}
 
+	// Detener y cerrar la música de fondo al salir
+	mciSendString(TEXT("close musicaFondo"), NULL, 0, NULL);
+
 	glfwTerminate();
 	return 0;
 }
@@ -575,11 +589,11 @@ void DoMovement()
 	right.y = 0.0f;
 	right = glm::normalize(right);
 
-	// Copiamos la posici�n actual para calcular el siguiente paso
+	skeletonYaw = glm::degrees(atan2(front.x, front.z));
+
 	glm::vec3 nextPos = skeletonPos;
 	bool isMoving = false;
 
-	// Movimiento hacia adelante / atr�s
 	if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP])
 	{
 		nextPos += front * cameraSpeed;
@@ -590,8 +604,6 @@ void DoMovement()
 		nextPos -= front * cameraSpeed;
 		isMoving = true;
 	}
-
-	// Movimiento lateral (A / D)
 	if (keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT])
 	{
 		nextPos -= right * cameraSpeed;
@@ -603,17 +615,16 @@ void DoMovement()
 		isMoving = true;
 	}
 
-	// Comprobamos colisi�n antes de aplicar el movimiento
 	if (isMoving)
 	{
 		if (!CheckCollision(nextPos))
 		{
-			skeletonPos = nextPos; // Si no choca, el esqueleto se mueve libremente
+			skeletonPos = nextPos;
 			isWalking = true;
 		}
 		else
 		{
-			isWalking = false; // Choc�, se detiene la animaci�n de caminata
+			isWalking = false;
 		}
 	}
 	else
@@ -621,7 +632,6 @@ void DoMovement()
 		isWalking = false;
 	}
 
-	// Control manual de las luces (lo conservas igual)
 	if (keys[GLFW_KEY_T]) { pointLightPositions[0].x += 0.01f; }
 	if (keys[GLFW_KEY_G]) { pointLightPositions[0].x -= 0.01f; }
 	if (keys[GLFW_KEY_Y]) { pointLightPositions[0].y += 0.01f; }
@@ -670,7 +680,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 		dogAnim = 1;
 	}
 
-	// Porton del panteon: O abre / cierra (una vez por pulsacion)
 	if (key == GLFW_KEY_O && action == GLFW_PRESS)
 	{
 		abrirPorton = !abrirPorton;
@@ -681,23 +690,24 @@ void Animation()
 {
 	if (isWalking)
 	{
-		// Incrementamos el ciclo de caminata basado en el tiempo
-		skelWalkCycle += deltaTime * 8.0f;
+		skelWalkCycle += deltaTime * 7.0f;
 
-		// Usamos seno para crear el balanceo peri�dico de las extremidades
-		skelArmAngle = sin(skelWalkCycle) * 25.0f;       // Rango de -25� a 25� para los brazos
-		skelLegAngle = sin(skelWalkCycle) * 25.0f;       // Rango de -25� a 25� para las piernas
-		skelForearmAngle = abs(sin(skelWalkCycle)) * 15.0f; // Flexi�n natural del codo
+		// Brazos y piernas alternan como en una caminata natural.
+		skelArmAngle = sin(skelWalkCycle) * 15.0f;
+		skelLegAngle = sin(skelWalkCycle) * 16.0f;
+
+		// Flexión suave del codo y de la rodilla durante el paso.
+		skelForearmAngle = (0.5f - 0.5f * cos(skelWalkCycle)) * 10.0f;
+		skelKneeAngle = (0.5f - 0.5f * cos(skelWalkCycle + 3.14159265f)) * 12.0f;
 	}
 	else
 	{
-		// Si no se mueve, regresamos las extremidades suavemente a su posici�n base (0)
 		skelArmAngle = 0.0f;
 		skelLegAngle = 0.0f;
 		skelForearmAngle = 0.0f;
+		skelKneeAngle = 0.0f;
 	}
 
-	// Porton: avanza hacia abierto o cerrado a velocidad constante
 	float objetivo = abrirPorton ? anguloMax : 0.0f;
 	if (anguloPorton < objetivo)
 		anguloPorton = glm::min(anguloPorton + velPorton * deltaTime, objetivo);
@@ -720,8 +730,6 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos)
 	lastX = xPos;
 	lastY = yPos;
 
-	// Multiplicamos por un factor de sensibilidad extra (ejemplo: 2.0f o 3.0f)
-	// Puedes subir o bajar este n�mero seg�n qu� tan r�pido quieras que gire
 	GLfloat sensitivityMultiplier = 2.5f;
 	xOffset *= sensitivityMultiplier;
 	yOffset *= sensitivityMultiplier;
