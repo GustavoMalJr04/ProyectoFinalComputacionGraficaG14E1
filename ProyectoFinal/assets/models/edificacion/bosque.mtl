@@ -1,5 +1,5 @@
 # 3ds Max Wavefront OBJ Exporter v0.99 - (c)2007 guruware
-# File Created: 07.11.2026 00:42:57
+# Rutas corregidas a relativas (desde assets/models/edificacion/)
 
 newmtl trunk_01
 	Kd 0.5500 0.5500 0.5500
@@ -14,7 +14,7 @@ newmtl trunk_01
 	Ni 1.5000
 	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd C:\Users\Gusmj\Documents\FI_UNAM_archivos\Lab.CompuGrafica\ProyectoFinalComputacionGraficaG14E1\ProyectoFinal\assets\textures\bark.jpg
+	map_Kd ../../textures/bark.jpg
 
 newmtl branch_2_01
 	Kd 0.5500 0.5500 0.5500
@@ -29,8 +29,8 @@ newmtl branch_2_01
 	Ni 1.5000
 	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd C:\Users\Gusmj\Documents\FI_UNAM_archivos\Lab.CompuGrafica\ProyectoFinalComputacionGraficaG14E1\ProyectoFinal\assets\textures\branch-1-01.png
-	map_d C:\Users\Gusmj\Documents\FI_UNAM_archivos\Lab.CompuGrafica\ProyectoFinalComputacionGraficaG14E1\ProyectoFinal\assets\textures\branch-1-01.png
+	map_Kd ../../textures/branch-1-01.png
+	map_d ../../textures/branch-1-01.png
 
 newmtl branch_2_02
 	Kd 0.5500 0.5500 0.5500
@@ -45,5 +45,5 @@ newmtl branch_2_02
 	Ni 1.5000
 	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd C:\Users\Gusmj\Documents\FI_UNAM_archivos\Lab.CompuGrafica\ProyectoFinalComputacionGraficaG14E1\ProyectoFinal\assets\textures\branch-1-02.png
-	map_d C:\Users\Gusmj\Documents\FI_UNAM_archivos\Lab.CompuGrafica\ProyectoFinalComputacionGraficaG14E1\ProyectoFinal\assets\textures\branch-1-02.png
+	map_Kd ../../textures/branch-1-02.png
+	map_d ../../textures/branch-1-02.png
