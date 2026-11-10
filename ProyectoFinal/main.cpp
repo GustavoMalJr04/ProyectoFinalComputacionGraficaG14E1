@@ -328,7 +328,51 @@ void agregarFlorPared(glm::vec3 p, glm::vec3 normal, float escala = 0.4f)
 	matFlores.push_back(m);
 }
 
+// ---------------- VELAS ----------------
+// vela.obj: base en y = 0, borde de cera en y = 1.0, radio 0.15 (partes "cuerpo" y "mecha").
+// vela_llama.obj: origen en la base de la llama; se pone en la punta (y = sY).
+// Se intercalan una grande y una chica.
+struct Vela
+{
+	glm::vec3 pos;   // base de la vela, ya sobre el piso
+	float sXZ, sY;   // escala del grosor y de la altura
+	float fase;      // desfase del parpadeo para que no titilen todas igual
+};
+std::vector<Vela> velas;
+
+const float VELA_GRANDE_XZ = 0.40f, VELA_GRANDE_Y = 0.38f;   // ~12 cm de ancho, 38 cm de alto
+const float VELA_CHICA_XZ = 0.28f, VELA_CHICA_Y = 0.21f;     // ~8 cm de ancho, 21 cm de alto
+
+// Flores, pétalos y velas más lejos que esto de la cámara no se dibujan (ahorra FPS)
+const float DISTANCIA_ADORNOS = 45.0f;
+
+float distancia2(const glm::vec3& a, const glm::vec3& b)
+{
+	glm::vec3 d = a - b;
+	return d.x * d.x + d.y * d.y + d.z * d.z;
+}
+
+void agregarVela(glm::vec3 p, bool grande)
+{
+	Vela v;
+	v.sXZ = (grande ? VELA_GRANDE_XZ : VELA_CHICA_XZ) * azar(0.95f, 1.05f);
+	v.sY = (grande ? VELA_GRANDE_Y : VELA_CHICA_Y) * azar(0.9f, 1.1f);
+	// Asentada en el piso; un centímetro abajo para que en las faldas no flote de un lado
+	v.pos = glm::vec3(p.x, alturaPiso(p.x, p.z) - 0.01f, p.z);
+	v.fase = azar(0.0f, 6.2832f);
+	velas.push_back(v);
+}
+
+// ¿El punto (x, z) cae sobre el tapete de pétalos?
+bool sobreSendero(float x, float z, float radio = 0.55f)
+{
+	for (const glm::vec3& p : centrosPetalos)
+		if (glm::length(glm::vec2(x, z) - glm::vec2(p.x, p.z)) < radio) return true;
+	return false;
+}
+
 // Tramo recto de pétalos de A a B, con flores en las dos orillas
+// y una vela en cada espacio entre flores (grande y chica intercaladas)
 void agregarTramo(glm::vec3 a, glm::vec3 b)
 {
 	const float paso = 0.35f, dispersion = 0.35f, pasoFlor = 1.5f, orilla = 1.0f;
@@ -357,6 +401,13 @@ void agregarTramo(glm::vec3 a, glm::vec3 b)
 		agregarFlor(a + dir * s + lado * (orilla + azar(-0.05f, 0.05f)));
 		agregarFlor(a + dir * s - lado * (orilla + azar(-0.05f, 0.05f)));
 	}
+	// Velas a la mitad entre dos flores; de un lado empieza la grande y del otro la chica
+	int k = 0;
+	for (float s = pasoFlor; s < largo - 0.3f; s += pasoFlor, k++)
+	{
+		agregarVela(a + dir * s + lado * orilla, k % 2 == 0);
+		agregarVela(a + dir * s - lado * orilla, k % 2 == 1);
+	}
 }
 
 // Marco de 10 flores alrededor del montículo de una tumba, como las tumbas
@@ -368,38 +419,37 @@ void agregarContornoTumba(const Tumba& t)
 	const float escala = 0.45f;  // más grandes que las del sendero para que el marco se note
 	float x0 = t.x0 - sep, x1 = t.x1 + sep, z0 = t.z0 - sep, z1 = t.z1 + sep;
 	float xm = (x0 + x1) * 0.5f;
-	float largo = z1 - z0;
+	float t1 = z0 + (z1 - z0) / 3.0f, t2 = z0 + 2.0f * (z1 - z0) / 3.0f;
 
-	// 4 esquinas
-	agregarFlor(glm::vec3(x0, 0.0f, z0), escala);
-	agregarFlor(glm::vec3(x1, 0.0f, z0), escala);
-	agregarFlor(glm::vec3(x0, 0.0f, z1), escala);
-	agregarFlor(glm::vec3(x1, 0.0f, z1), escala);
-	// mitad de los lados cortos (cabecera junto a la lápida y pie)
-	agregarFlor(glm::vec3(xm, 0.0f, z0), escala);
-	agregarFlor(glm::vec3(xm, 0.0f, z1), escala);
-	// 2 en cada lado largo, a un tercio y dos tercios
-	for (int k = 1; k <= 2; k++)
+	// Las 10 flores en orden alrededor del marco:
+	// 4 esquinas + 1 a la mitad de cada lado corto + 2 en cada lado largo (a 1/3 y 2/3)
+	glm::vec3 marco[10] = {
+		glm::vec3(x0, 0.0f, z0), glm::vec3(xm, 0.0f, z0), glm::vec3(x1, 0.0f, z0),
+		glm::vec3(x1, 0.0f, t1), glm::vec3(x1, 0.0f, t2), glm::vec3(x1, 0.0f, z1),
+		glm::vec3(xm, 0.0f, z1), glm::vec3(x0, 0.0f, z1),
+		glm::vec3(x0, 0.0f, t2), glm::vec3(x0, 0.0f, t1)
+	};
+	for (int i = 0; i < 10; i++)
 	{
-		float z = z0 + largo * k / 3.0f;
-		agregarFlor(glm::vec3(x0, 0.0f, z), escala);
-		agregarFlor(glm::vec3(x1, 0.0f, z), escala);
+		agregarFlor(marco[i], escala);
+		// Una vela en el espacio entre esta flor y la siguiente: 10 velas, grande y chica intercaladas
+		glm::vec3 medio = (marco[i] + marco[(i + 1) % 10]) * 0.5f;
+		agregarVela(medio, i % 2 == 0);
 	}
 }
 
-// Quita las flores que quedaron encima del camino (cruces, ramales, frente del altar)
+// Quita las flores y velas que quedaron encima del camino (cruces, ramales, frente del altar)
 void quitarFloresSobreSendero(float radio = 0.55f)
 {
 	std::vector<glm::mat4> quedan;
 	for (const glm::mat4& f : matFlores)
-	{
-		glm::vec2 pf(f[3].x, f[3].z);
-		bool estorba = false;
-		for (const glm::vec3& p : centrosPetalos)
-			if (glm::length(pf - glm::vec2(p.x, p.z)) < radio) { estorba = true; break; }
-		if (!estorba) quedan.push_back(f);
-	}
+		if (!sobreSendero(f[3].x, f[3].z, radio)) quedan.push_back(f);
 	matFlores = quedan;
+
+	std::vector<Vela> velasQuedan;
+	for (const Vela& v : velas)
+		if (!sobreSendero(v.pos.x, v.pos.z, radio)) velasQuedan.push_back(v);
+	velas = velasQuedan;
 }
 
 // ---------------- FLORES EN EL ARCO DE ENTRADA ----------------
@@ -456,6 +506,10 @@ void agregarFloresBarda(glm::vec3 a, glm::vec3 b, glm::vec3 adentro)
 	{
 		float fondo = (i % 2 == 0) ? 0.45f : 0.85f;
 		agregarFlor(a + dir * (s + azar(-0.15f, 0.15f)) + adentro * fondo, 0.34f);
+
+		// Vela en el espacio hasta la siguiente flor, entre las dos hileras
+		if (s + paso < largo - 0.3f)
+			agregarVela(a + dir * (s + paso * 0.5f) + adentro * 0.65f, i % 2 == 0);
 	}
 }
 
@@ -566,7 +620,7 @@ void construirSendero()
 	agregarFloresEntradas();
 
 	std::cout << "Sendero: " << matPetalos.size() << " quads de petalos, "
-		<< matFlores.size() << " flores" << std::endl;
+		<< matFlores.size() << " flores, " << velas.size() << " velas" << std::endl;
 }
 
 glm::vec3 Light1 = glm::vec3(0);
@@ -702,6 +756,8 @@ int main()
 	Model cesped((char*)"assets/models/edificacion/cesped.obj");
 	Model cempasuchil((char*)"assets/models/edificacion/cempasuchil.obj");
 	Model senderoPetalos((char*)"assets/models/edificacion/sendero_petalos.obj");
+	Model vela((char*)"assets/models/edificacion/vela.obj");
+	Model velaLlama((char*)"assets/models/edificacion/vela_llama.obj");
 
 	glm::mat4 modeloBardas = glm::mat4(1.0f);
 	PapelPicado papelPicado;
@@ -960,19 +1016,36 @@ int main()
 		glDisable(GL_BLEND);
 		glBindVertexArray(0);
 
-		// ---------------- SENDERO DE CEMPASUCHIL ----------------
+		// ---------------- SENDERO DE CEMPASUCHIL, FLORES Y VELAS ----------------
+		// Solo se dibuja lo que está a menos de DISTANCIA_ADORNOS de la cámara:
+		// más lejos se ve como un punto y dibujarlo solo baja los FPS.
+		glm::vec3 posCam = camera.GetPosition();
+		const float dMax2 = DISTANCIA_ADORNOS * DISTANCIA_ADORNOS;
+
 		GLint transpLoc = glGetUniformLocation(lightingShader.Program, "transparency");
 		glUniform1i(transpLoc, 1);   // descarta el fondo transparente de petalos_sendero.png
 		for (const glm::mat4& m : matPetalos)
 		{
+			if (distancia2(glm::vec3(m[3].x, m[3].y, m[3].z), posCam) > dMax2) continue;
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
 			senderoPetalos.Draw(lightingShader);
 		}
 		glUniform1i(transpLoc, 0);
 		for (const glm::mat4& m : matFlores)
 		{
+			if (distancia2(glm::vec3(m[3].x, m[3].y, m[3].z), posCam) > dMax2) continue;
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
 			cempasuchil.Draw(lightingShader);
+		}
+
+		// Cuerpo de las velas (cera + mecha). Las llamas van al final del cuadro, con blending.
+		for (const Vela& v : velas)
+		{
+			if (distancia2(v.pos, posCam) > dMax2) continue;
+			glm::mat4 mv = glm::translate(glm::mat4(1.0f), v.pos);
+			mv = glm::scale(mv, glm::vec3(v.sXZ, v.sY, v.sXZ));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(mv));
+			vela.Draw(lightingShader);
 		}
 
 		papelPicado.dibujar(lightingShader, currentFrame);
@@ -1107,6 +1180,37 @@ int main()
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 		glDepthFunc(GL_LESS);     // regresar al valor normal
+
+		// ---------------- LLAMAS DE LAS VELAS (lo último del cuadro) ----------------
+		// Van después del skybox para que el cielo no las tape. No escriben profundidad
+		// (glDepthMask false) pero sí respetan la de la escena: una barda las tapa.
+		lightingShader.Use();
+		modelLoc = glGetUniformLocation(lightingShader.Program, "model");
+		GLint ambienteLoc = glGetUniformLocation(lightingShader.Program, "dirLight.ambient");
+		glUniform3f(ambienteLoc, 1.6f, 1.6f, 1.6f);   // la llama brilla sola, no depende de la luna
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);   // suma de color: se ve luminosa
+		glDepthMask(GL_FALSE);
+		for (const Vela& v : velas)
+		{
+			if (distancia2(v.pos, posCam) > dMax2) continue;
+			// Parpadeo: dos senos con desfase propio para que cada vela titile distinto
+			float flick = 1.0f + 0.08f * sin(currentFrame * 12.0f + v.fase)
+				+ 0.04f * sin(currentFrame * 23.0f + 2.0f * v.fase);
+			float vaiven = 4.0f * sin(currentFrame * 3.0f + v.fase);   // grados
+
+			glm::mat4 l = glm::translate(glm::mat4(1.0f), v.pos + glm::vec3(0.0f, v.sY, 0.0f));
+			l = glm::rotate(l, glm::radians(vaiven), glm::vec3(0.0f, 0.0f, 1.0f));
+			l = glm::scale(l, glm::vec3(v.sXZ, v.sXZ * flick, v.sXZ));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(l));
+			velaLlama.Draw(lightingShader);
+		}
+		glDepthMask(GL_TRUE);
+		glDisable(GL_BLEND);
+		glUniform3f(ambienteLoc, 0.6f, 0.6f, 0.6f);   // regresar la luz ambiente de la luna
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 
 		glfwSwapBuffers(window);
 	}
