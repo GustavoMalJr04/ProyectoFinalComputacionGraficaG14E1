@@ -43,6 +43,7 @@ GLfloat lastX = WIDTH / 2.0;
 GLfloat lastY = HEIGHT / 2.0;
 bool keys[1024];
 bool firstMouse = true;
+
 // Light attributes
 glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 bool active;
@@ -133,7 +134,7 @@ bool isWalking = false;
 float skelArmAngle = 0.0f;
 float skelLegAngle = 0.0f;
 float skelForearmAngle = 0.0f;
-float skelKneeAngle = 0.0f; // Flexión de rodillas independiente de los brazos
+float skelKneeAngle = 0.0f;
 
 float rotBall = 0.0f;
 bool AnimBall = false;
@@ -160,6 +161,9 @@ struct BoundingBox {
 
 std::vector<BoundingBox> invisibleWalls = {
 	{  -120.0f, 120.0f, 80.0f, 85.0f },
+	{  -120.0f, 120.0f, -55.0f, -49.8f },
+	{	-50.0f, -49.75f, -60.0f, 50.0f },
+	{	49.75f, 50.0f, -60.0f, 50.0f },
 	{  -65.0f, -60.0f, -80.0f, 80.0f },
 	{  60.0f, 65.0f, -80.0f, 80.0f },
 	{  10.0f, 15.0f,  5.0f,  40.0f },
@@ -288,7 +292,7 @@ int main()
 		DoMovement();
 		Animation();
 
-		camera.SetPosition(skeletonPos + glm::vec3(0.0f, 2.0f, -0.5f));
+		camera.SetPosition(skeletonPos + glm::vec3(0.0f, 2.0f, -0.25f));
 
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -589,7 +593,19 @@ void DoMovement()
 	right.y = 0.0f;
 	right = glm::normalize(right);
 
-	skeletonYaw = glm::degrees(atan2(front.x, front.z));
+
+	// 1. Obtenemos el ángulo hacia donde apunta la cámara actualmente
+	float targetYaw = glm::degrees(atan2(front.x, front.z));
+
+	// 2. Interpolamos suavemente (Lerp) para que el esqueleto rote de forma retardada/más lenta que la cámara
+	float rotationSpeed = 10.0f; // Sube este número si quieres que gire más rápido, bájalo para más inercia
+
+	// Manejo seguro del salto de ángulo en 360 grados para evitar giros raros
+	float diff = targetYaw - skeletonYaw;
+	while (diff < -180.0f) diff += 360.0f;
+	while (diff > 180.0f) diff -= 360.0f;
+
+	skeletonYaw += diff * glm::min(1.0f, rotationSpeed * deltaTime);
 
 	glm::vec3 nextPos = skeletonPos;
 	bool isMoving = false;
