@@ -1,42 +1,82 @@
-# 3ds Max Wavefront OBJ Exporter v0.99 - (c)2007 guruware
-# File Created: 10.11.2026 00:27:33
+# iglesia.mtl - corregido para OpenGL
+# Un material por objeto. Las texturas van en la carpeta maps/ junto al .obj
+# Si tu imagen se llama distinto, cambia SOLO el nombre en la linea map_Kd
 
-newmtl iglesia_muro
+newmtl mat_muros
+	Ns 10.0000
+	Ka 1.0000 1.0000 1.0000
 	Kd 1.0000 1.0000 1.0000
 	Ks 0.0200 0.0200 0.0200
-	Tr 0.0000
-	d 1.0000
-	Tf 0.0000 0.0000 0.0000
-	Pr 0.9200
-	Pm 0.0000
-	Pc 0.0000
-	Pcr 0.0000
-	Ni 1.5000
 	Ke 0.0000 0.0000 0.0000
-	illum 2
-	map_Kd C:\Users\Hana_\OneDrive\Escritorio\ProyectoFinalComputacionGraficaG14E1\ProyectoFinal\assets\textures\muro_iglesia.jpg
-
-newmtl wire_000000000
-	Ns 32
-	d 1
-	Tr 0
-	Tf 1 1 1
-	illum 2
-	Ka 0.0000 0.0000 0.0000
-	Kd 0.0000 0.0000 0.0000
-	Ks 0.3500 0.3500 0.3500
-
-newmtl wire_134006006
-	Kd 0.5000 0.5000 0.5000
-	Ks 1.0000 1.0000 1.0000
-	Tr 0.0000
 	d 1.0000
-	Tf 1.0000 1.0000 1.0000
-	Pr 0.0000
-	Pm 0.0000
-	Pc 0.0000
-	Pcr 0.0000
-	Ni 1.5200
-	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd C:\Users\Hana_\OneDrive\Escritorio\ProyectoFinalComputacionGraficaG14E1\ProyectoFinal\assets\textures\teja_cupula.jpg
+	map_Kd ../../textures/muro_iglesia.jpg
+
+newmtl mat_cupula
+	Ns 32.0000
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.3000 0.3000 0.3000
+	Ke 0.0000 0.0000 0.0000
+	d 1.0000
+	illum 2
+	map_Kd ../../textures/teja_cupula.jpg
+
+newmtl mat_cupu
+	Ns 32.0000
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.3000 0.3000 0.3000
+	Ke 0.0000 0.0000 0.0000
+	d 1.0000
+	illum 2
+	map_Kd ../../textures/teja_cupula.jpg
+
+newmtl mat_techo
+	Ns 10.0000
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0500 0.0500 0.0500
+	Ke 0.0000 0.0000 0.0000
+	d 1.0000
+	illum 2
+	map_Kd ../../textures/cantera.jpg
+
+newmtl mat_madera
+	Ns 20.0000
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ke 0.0000 0.0000 0.0000
+	d 1.0000
+	illum 2
+	map_Kd ../../textures/madera_iglesia.jpg
+
+newmtl mat_campanas
+	Ns 64.0000
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.6000 0.6000 0.6000
+	Ke 0.0000 0.0000 0.0000
+	d 1.0000
+	illum 2
+	map_Kd ../../textures/iglesia_campanas.jpg
+
+newmtl mat_ventanas
+	Ns 64.0000
+	Ka 1.0000 1.0000 1.0000
+	Kd 0.7500 0.8500 0.9000
+	Ks 0.5000 0.5000 0.5000
+	Ke 0.0000 0.0000 0.0000
+	d 1.0000
+	illum 2
+
+newmtl mat_cruz_cara
+	Ns 20.0000
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ke 0.0000 0.0000 0.0000
+	d 1.0000
+	illum 2
+	map_Kd ../../textures/madera_iglesia.jpg
