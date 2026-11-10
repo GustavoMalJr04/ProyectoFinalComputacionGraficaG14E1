@@ -10,55 +10,55 @@
 #include <windows.h>
 #pragma comment(lib, "winmm.lib")
 
-/// GLEW
+// GLEW
 #include <GL/glew.h>
 
 // GLFW
 #include <GLFW/glfw3.h>
 
-// Other Libs
+// Carga de imágenes
 #include "stb_image.h"
 
-// GLM Mathematics
+// GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-//Load Models
+// SOIL2 para las texturas de los modelos
 #include "SOIL2/SOIL2.h"
 
 
-// Other includes
+// Clases del proyecto
 #include "Shader.h"
 #include "Camera.h"
 #include "Model.h"
-#include "PapelPicado.h"   // PAPEL PICADO: tiras con ondulacion en el panteon
-#include "Texture.h"       // SKYBOX: TextureLoading::LoadCubemap
+#include "PapelPicado.h"   // tiras de papel picado
+#include "Texture.h"   // carga del skybox
 
-// Function prototypes
+// Prototipos de funciones
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void MouseCallback(GLFWwindow* window, double xPos, double yPos);
 void DoMovement();
 void Animation();
 
-// Window dimensions
+// Tamaño de la ventana
 const GLuint WIDTH = 800, HEIGHT = 600;
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
-// Camera
+// Cámara
 Camera  camera(glm::vec3(0.0f, 0.0f, 3.0f));
 GLfloat lastX = WIDTH / 2.0;
 GLfloat lastY = HEIGHT / 2.0;
 bool keys[1024];
 bool firstMouse = true;
 
-// Light attributes
+// Luz de prueba
 glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 bool active;
 
-// Positions of the point lights
+// Luz de colores que se prende con Espacio
 glm::vec3 pointLightPositions[] = {
-	glm::vec3(-20.0f, 3.2f, 4.5f),   // luz de colores (Espacio): frente a la ofrenda, en el centro del atrio
+	glm::vec3(-20.0f, 3.2f, 4.5f),   // frente a la ofrenda
 	glm::vec3(0.0f,0.0f, 0.0f),
 	glm::vec3(0.0f,0.0f,  0.0f),
 	glm::vec3(0.0f,0.0f, 0.0f)
@@ -108,9 +108,9 @@ float vertices[] = {
 	   -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 };
 
-// ---------------- SKYBOX ----------------
+// Vértices del skybox
 GLfloat skyboxVertices[] = {
-	// Positions
+	// Posiciones
 	-1.0f,  1.0f, -1.0f,
 	-1.0f, -1.0f, -1.0f,
 	 1.0f, -1.0f, -1.0f,
@@ -167,11 +167,11 @@ GLuint skyboxIndices[] =
 	32,33,34,35
 };
 
-// Posición base del esqueleto en el mundo
+// Posición inicial del esqueleto
 glm::vec3 skeletonPos(-25.0f, 0.0f, 55.0f);
-float skeletonYaw = 0.0f; // Ángulo de orientación guiado por el mouse/cámara
+float skeletonYaw = 0.0f;   // hacia dónde mira el esqueleto
 
-// ---------------- PORTON DEL PANTEON ----------------
+// Portón del panteón
 glm::vec3 portonCentro(32.3f, 0.0f, 50.0f);
 float portonRotY = 0.0f;
 float portonAncho = 1.57f;
@@ -180,7 +180,7 @@ float anguloMax = 90.0f;
 float velPorton = 60.0f;
 bool  abrirPorton = false;
 
-// ---------------- TUMBAS DEL PANTEON ----------------
+// Lápidas y cruces de las tumbas
 glm::vec3 posLapidas[4] = {
 	glm::vec3(37.66f, 0.29f, -27.81f),
 	glm::vec3(27.11f, 0.36f, -27.81f),
@@ -192,19 +192,16 @@ glm::vec3 posCruces[2] = {
 	glm::vec3(37.62f, 0.40f, 12.95f)
 };
 
-// ---------------- OFRENDA (ALTAR) ----------------
-// altar.obj sin escalar: x = -4..4, z = -1.42..3.71, alto 4.5. El frente (los escalones
-// que bajan) mira hacia +Z, o sea hacia el arco de entrada.
-// Se pone en el centro de la explanada del atrio (atrio_explanada se dibuja en x = -20:
-// cubre x = -50..10, z = -50..50) y más grande que antes (antes 0.5).
+// Ofrenda
+// El altar mira hacia +Z (hacia el arco) y va en el centro de la explanada del atrio.
 const glm::vec3 posAltar(-20.0f, 0.0f, 0.0f);
-const float escalaAltar = 0.8f;   // 6.4 m de ancho, 3.6 m de alto
-// Huella del altar ya escalado y colocado (para flores, velas y colisión)
+const float escalaAltar = 0.8f;   // 6.4 m de ancho y 3.6 m de alto
+// Medidas del altar ya colocado, para acomodar flores, velas y la colisión
 const float altarX0 = -20.0f - 4.0f * 0.8f, altarX1 = -20.0f + 4.0f * 0.8f;
 const float altarZ0 = -1.42f * 0.8f, altarZ1 = 3.71f * 0.8f;
 
-// ---------------- SENDERO DE CEMPASUCHIL (ofrenda -> tumbas) ----------------
-// Montículos de tierra medidos de piso_panteon.obj: x0, x1, z0, z1
+// Tumbas del panteón
+// Montículo de tierra de cada tumba, medido de piso_panteon.obj: x0, x1, z0, z1
 struct Tumba { float x0, x1, z0, z1; };
 Tumba tumbas[6] = {
 	{ 26.22f, 27.98f, -28.06f, -23.06f },   // lápida (27.11, -27.81)
@@ -216,20 +213,21 @@ Tumba tumbas[6] = {
 };
 const float xPasillo = 32.3f;   // pasillo central del panteón, alineado con el portón
 
+// Matrices de los pétalos y las flores
 std::vector<glm::mat4> matPetalos;     // una matriz por cada quad de pétalos
 std::vector<glm::mat4> matFlores;      // una matriz por cada flor
 std::vector<glm::vec3> centrosPetalos;
-std::mt19937 rngAdornos(2026);         // semilla fija: el sendero sale igual en cada ejecución
+std::mt19937 rngAdornos(2026);   // semilla fija: los adornos salen igual siempre
 
+// Número al azar entre a y b
 float azar(float a, float b)
 {
 	return std::uniform_real_distribution<float>(a, b)(rngAdornos);
 }
 
-// ---------------- ALTURA DEL PISO DEL PANTEON ----------------
-// El piso del panteón no es plano: cada tumba tiene un montículo cuyas faldas
-// se extienden varios metros. Para que flores y pétalos no queden enterrados se
-// lee piso_panteon.obj y se busca la altura real del piso en (x, z).
+// Altura del piso del panteón
+// Cada tumba tiene un montículo de tierra, así que el piso no es plano.
+// Se lee piso_panteon.obj para colocar flores, pétalos y velas a la altura correcta.
 struct TrianguloPiso { glm::vec3 a, b, c; };
 std::vector<TrianguloPiso> trianguloPiso;
 
@@ -272,8 +270,8 @@ void cargarPisoPanteon(const char* ruta)
 	}
 }
 
-// Altura del piso en (x, z). Fuera del panteón regresa 0 (atrio y corredor son planos).
-// Si se pasa 'normal', ahí se guarda la inclinación del piso en ese punto.
+// Regresa la altura del piso en (x, z); fuera del panteón regresa 0.
+// Si se pasa 'normal', también regresa la inclinación del piso.
 float alturaPiso(float x, float z, glm::vec3* normal = nullptr)
 {
 	float mejor = 0.0f;
@@ -311,8 +309,7 @@ glm::mat4 alinearY(glm::mat4 m, glm::vec3 n)
 	return glm::rotate(m, acos(c), eje);
 }
 
-// Flor parada en el piso. Toma la altura más alta bajo la flor para que en
-// las faldas de los montículos no se entierre de un lado.
+// Flor parada en el piso (revisa varios puntos para que no se entierre en las pendientes)
 void agregarFlor(glm::vec3 p, float escala = 0.28f)
 {
 	float r = 0.45f * escala;
@@ -330,7 +327,7 @@ void agregarFlor(glm::vec3 p, float escala = 0.28f)
 	matFlores.push_back(m);
 }
 
-// Flor pegada a una pared (o encima de algo), con su eje Y mirando hacia 'normal'
+// Flor pegada a una pared, mirando hacia 'normal'
 void agregarFlorPared(glm::vec3 p, glm::vec3 normal, float escala = 0.4f)
 {
 	glm::mat4 m(1.0f);
@@ -341,10 +338,8 @@ void agregarFlorPared(glm::vec3 p, glm::vec3 normal, float escala = 0.4f)
 	matFlores.push_back(m);
 }
 
-// ---------------- VELAS ----------------
-// vela.obj: base en y = 0, borde de cera en y = 1.0, radio 0.15 (partes "cuerpo" y "mecha").
-// vela_llama.obj: origen en la base de la llama; se pone en la punta (y = sY).
-// Se intercalan una grande y una chica.
+// Estructura de la vela
+// vela.obj mide 1 de alto con la base en y = 0; la llama se coloca en la punta (y = sY).
 struct Vela
 {
 	glm::vec3 pos;   // base de la vela, ya sobre el piso
@@ -353,30 +348,33 @@ struct Vela
 };
 std::vector<Vela> velas;
 
-const float VELA_GRANDE_XZ = 0.40f, VELA_GRANDE_Y = 0.38f;   // ~12 cm de ancho, 38 cm de alto
-const float VELA_CHICA_XZ = 0.28f, VELA_CHICA_Y = 0.21f;     // ~8 cm de ancho, 21 cm de alto
+// Tamaño de las velas grande y chica
+const float VELA_GRANDE_XZ = 0.32f, VELA_GRANDE_Y = 0.29f;   // ~10 cm de ancho, 29 cm de alto
+const float VELA_CHICA_XZ = 0.22f, VELA_CHICA_Y = 0.16f;     // ~7 cm de ancho, 16 cm de alto
 
-// Flores, pétalos y velas más lejos que esto de la cámara no se dibujan (ahorra FPS)
+// Los adornos más lejos que esta distancia no se dibujan
 const float DISTANCIA_ADORNOS = 45.0f;
 
+// Distancia al cuadrado entre dos puntos
 float distancia2(const glm::vec3& a, const glm::vec3& b)
 {
 	glm::vec3 d = a - b;
 	return d.x * d.x + d.y * d.y + d.z * d.z;
 }
 
+// Agrega una vela grande o chica sobre el piso
 void agregarVela(glm::vec3 p, bool grande)
 {
 	Vela v;
 	v.sXZ = (grande ? VELA_GRANDE_XZ : VELA_CHICA_XZ) * azar(0.95f, 1.05f);
 	v.sY = (grande ? VELA_GRANDE_Y : VELA_CHICA_Y) * azar(0.9f, 1.1f);
-	// Asentada en el piso; un centímetro abajo para que en las faldas no flote de un lado
+	// Se hunde un centímetro para que no flote en las pendientes
 	v.pos = glm::vec3(p.x, alturaPiso(p.x, p.z) - 0.01f, p.z);
 	v.fase = azar(0.0f, 6.2832f);
 	velas.push_back(v);
 }
 
-// ¿El punto (x, z) cae sobre el tapete de pétalos?
+// Revisa si un punto cae sobre el camino de pétalos
 bool sobreSendero(float x, float z, float radio = 0.55f)
 {
 	for (const glm::vec3& p : centrosPetalos)
@@ -384,8 +382,8 @@ bool sobreSendero(float x, float z, float radio = 0.55f)
 	return false;
 }
 
-// Tramo recto de pétalos de A a B, con flores en las dos orillas
-// y una vela en cada espacio entre flores (grande y chica intercaladas)
+// Tramo recto del sendero: pétalos al centro, flores en las orillas
+// y una vela entre cada par de flores
 void agregarTramo(glm::vec3 a, glm::vec3 b)
 {
 	const float paso = 0.35f, dispersion = 0.35f, pasoFlor = 1.5f, orilla = 1.0f;
@@ -400,10 +398,10 @@ void agregarTramo(glm::vec3 a, glm::vec3 b)
 		glm::vec3 p = a + dir * (i * paso) + lado * azar(-dispersion, dispersion);
 		glm::vec3 nPiso;
 		p.y = alturaPiso(p.x, p.z, &nPiso)
-			+ 0.012f + 0.002f * (float)(matPetalos.size() % 8);   // capas: evita z-fighting
+			+ 0.012f + 0.002f * (float)(matPetalos.size() % 8);   // cada pétalo un poco más alto para evitar z-fighting
 		glm::mat4 m(1.0f);
 		m = glm::translate(m, p);
-		m = alinearY(m, nPiso);                                  // el tapete se recarga en la falda del montículo
+		m = alinearY(m, nPiso);   // sigue la inclinación del piso
 		m = glm::rotate(m, glm::radians(azar(0.0f, 360.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
 		m = glm::scale(m, glm::vec3(azar(0.9f, 1.2f), 1.0f, azar(0.9f, 1.2f)));
 		matPetalos.push_back(m);
@@ -414,7 +412,7 @@ void agregarTramo(glm::vec3 a, glm::vec3 b)
 		agregarFlor(a + dir * s + lado * (orilla + azar(-0.05f, 0.05f)));
 		agregarFlor(a + dir * s - lado * (orilla + azar(-0.05f, 0.05f)));
 	}
-	// Velas a la mitad entre dos flores; de un lado empieza la grande y del otro la chica
+	// Velas entre las flores, intercalando grande y chica
 	int k = 0;
 	for (float s = pasoFlor; s < largo - 0.3f; s += pasoFlor, k++)
 	{
@@ -423,19 +421,16 @@ void agregarTramo(glm::vec3 a, glm::vec3 b)
 	}
 }
 
-// Marco de 10 flores alrededor del montículo de una tumba, como las tumbas
-// adornadas del Día de Muertos:
-//   4 esquinas + 1 a la mitad de cada lado corto + 2 en cada lado largo = 10
+// Marco de 10 flores y 10 velas alrededor de una tumba
 void agregarContornoTumba(const Tumba& t)
 {
-	const float sep = 0.25f;     // qué tan afuera del montículo queda el marco
-	const float escala = 0.45f;  // más grandes que las del sendero para que el marco se note
+	const float sep = 0.25f;   // separación del montículo
+	const float escala = 0.28f;   // tamaño de las flores del marco
 	float x0 = t.x0 - sep, x1 = t.x1 + sep, z0 = t.z0 - sep, z1 = t.z1 + sep;
 	float xm = (x0 + x1) * 0.5f;
 	float t1 = z0 + (z1 - z0) / 3.0f, t2 = z0 + 2.0f * (z1 - z0) / 3.0f;
 
-	// Las 10 flores en orden alrededor del marco:
-	// 4 esquinas + 1 a la mitad de cada lado corto + 2 en cada lado largo (a 1/3 y 2/3)
+	// Posición de las 10 flores: 4 esquinas, 1 en cada lado corto y 2 en cada lado largo
 	glm::vec3 marco[10] = {
 		glm::vec3(x0, 0.0f, z0), glm::vec3(xm, 0.0f, z0), glm::vec3(x1, 0.0f, z0),
 		glm::vec3(x1, 0.0f, t1), glm::vec3(x1, 0.0f, t2), glm::vec3(x1, 0.0f, z1),
@@ -445,13 +440,13 @@ void agregarContornoTumba(const Tumba& t)
 	for (int i = 0; i < 10; i++)
 	{
 		agregarFlor(marco[i], escala);
-		// Una vela en el espacio entre esta flor y la siguiente: 10 velas, grande y chica intercaladas
+		// Vela entre esta flor y la siguiente
 		glm::vec3 medio = (marco[i] + marco[(i + 1) % 10]) * 0.5f;
 		agregarVela(medio, i % 2 == 0);
 	}
 }
 
-// Quita las flores y velas que quedaron encima del camino (cruces, ramales, frente del altar)
+// Quita las flores y velas que quedaron encima del camino
 void quitarFloresSobreSendero(float radio = 0.55f)
 {
 	std::vector<glm::mat4> quedan;
@@ -465,20 +460,18 @@ void quitarFloresSobreSendero(float radio = 0.55f)
 	velas = velasQuedan;
 }
 
-// ---------------- FLORES EN EL ARCO DE ENTRADA ----------------
-// atrio_arco_entrada.obj se dibuja en (-20, -0.25, 50). Hueco del arco (coordenadas locales):
-// lados rectos en x = ±2.5 de y = 0 a 4, y medio círculo de centro (0, 4) y radio 2.5 (cima en 6.5).
-// El arco mide 0.5 de grueso (caras en z = ±0.25).
+// Flores en el arco de entrada del atrio
+// El hueco del arco tiene lados rectos hasta y = 4 y un medio círculo de radio 2.5.
 const glm::vec3 posArco(-20.0f, -0.25f, 50.0f);
 
-// Una flor cada metro siguiendo el contorno del hueco, en las dos caras del arco
+// Una flor cada metro alrededor del hueco, en las dos caras del arco
 void agregarFloresArco()
 {
 	const float semiAncho = 2.5f, yRecto = 4.0f, radio = 2.5f;
-	const float separacion = 0.3f;   // qué tan afuera del borde del hueco quedan las flores
+	const float separacion = 0.3f;   // separación del borde del hueco
 	const float r = radio + separacion;
 	const float xLado = semiAncho + separacion;
-	const float yInicio = 0.5f;      // primera flor a medio metro del suelo
+	const float yInicio = 0.5f;   // altura de la primera flor
 	const float paso = 1.0f;         // una flor por metro
 
 	const float largoRecto = yRecto - yInicio;
@@ -488,29 +481,25 @@ void agregarFloresArco()
 	for (float s = 0.0f; s <= total + 0.01f; s += paso)
 	{
 		glm::vec3 local;
-		if (s < largoRecto)                                   // lado izquierdo, subiendo
+		if (s < largoRecto)   // lado izquierdo
 			local = glm::vec3(-xLado, yInicio + s, 0.0f);
-		else if (s < largoRecto + largoCurva)                 // medio círculo, de izquierda a derecha
+		else if (s < largoRecto + largoCurva)   // medio círculo
 		{
 			float ang = 3.14159265f * (1.0f - (s - largoRecto) / largoCurva);
 			local = glm::vec3(r * cos(ang), yRecto + r * sin(ang), 0.0f);
 		}
-		else                                                  // lado derecho, bajando
+		else   // lado derecho
 			local = glm::vec3(xLado, yRecto - (s - largoRecto - largoCurva), 0.0f);
 
-		agregarFlorPared(posArco + local + glm::vec3(0.0f, 0.0f, 0.26f), glm::vec3(0.0f, 0.0f, 1.0f));    // cara de afuera (+Z)
-		agregarFlorPared(posArco + local + glm::vec3(0.0f, 0.0f, -0.26f), glm::vec3(0.0f, 0.0f, -1.0f));  // cara del atrio (-Z)
+		agregarFlorPared(posArco + local + glm::vec3(0.0f, 0.0f, 0.26f), glm::vec3(0.0f, 0.0f, 1.0f));   // cara de afuera
+		agregarFlorPared(posArco + local + glm::vec3(0.0f, 0.0f, -0.26f), glm::vec3(0.0f, 0.0f, -1.0f));   // cara del atrio
 	}
 }
 
-// ---------------- FLORES EN EL PERIMETRO DEL PANTEON ----------------
-// Caras interiores de barda_panteon.obj (model = identidad):
-//   oeste x = 15.25 (hueco del corredor z = -5..5), este x = 49.75,
-//   norte z = -49.75, sur z = 49.75 (portón entre x = 29.9 y 34.7).
-// Arriate al pie de la barda de A a B: dos hileras en zigzag, una flor cada 1.2 m.
-void agregarFloresBarda(glm::vec3 a, glm::vec3 b, glm::vec3 adentro)
+// Flores al pie de una barda, de A a B, en dos hileras en zigzag.
+// Con velas, pone una vela entre cada par de flores.
+void agregarFloresBarda(glm::vec3 a, glm::vec3 b, glm::vec3 adentro, bool conVelas = true, float paso = 1.2f, float escala = 0.28f)
 {
-	const float paso = 1.2f;
 	glm::vec3 d = b - a;
 	float largo = glm::length(d);
 	glm::vec3 dir = d / largo;
@@ -518,78 +507,72 @@ void agregarFloresBarda(glm::vec3 a, glm::vec3 b, glm::vec3 adentro)
 	for (float s = 0.4f; s < largo - 0.3f; s += paso, i++)
 	{
 		float fondo = (i % 2 == 0) ? 0.45f : 0.85f;
-		agregarFlor(a + dir * (s + azar(-0.15f, 0.15f)) + adentro * fondo, 0.34f);
+		agregarFlor(a + dir * (s + azar(-0.15f, 0.15f)) + adentro * fondo, escala);
 
-		// Vela en el espacio hasta la siguiente flor, entre las dos hileras
-		if (s + paso < largo - 0.3f)
+		// Vela entre esta flor y la siguiente
+		if (conVelas && s + paso < largo - 0.3f)
 			agregarVela(a + dir * (s + paso * 0.5f) + adentro * 0.65f, i % 2 == 0);
 	}
 }
 
+// Recorre las cuatro bardas del panteón por dentro
 void agregarFloresPerimetroPanteon()
 {
 	const glm::vec3 masX(1.0f, 0.0f, 0.0f), menosX(-1.0f, 0.0f, 0.0f);
 	const glm::vec3 masZ(0.0f, 0.0f, 1.0f), menosZ(0.0f, 0.0f, -1.0f);
 
-	// Barda oeste (dos tramos, sin tapar el corredor)
+	// Barda oeste, sin tapar el corredor
 	agregarFloresBarda(glm::vec3(15.25f, 0.0f, -49.75f), glm::vec3(15.25f, 0.0f, -5.5f), masX);
 	agregarFloresBarda(glm::vec3(15.25f, 0.0f, 5.5f), glm::vec3(15.25f, 0.0f, 49.75f), masX);
 	// Barda este
 	agregarFloresBarda(glm::vec3(49.75f, 0.0f, -49.75f), glm::vec3(49.75f, 0.0f, 49.75f), menosX);
 	// Barda norte
 	agregarFloresBarda(glm::vec3(15.25f, 0.0f, -49.75f), glm::vec3(49.75f, 0.0f, -49.75f), masZ);
-	// Barda sur, dejando libre el portón y los arriates de la entrada
+	// Barda sur, sin tapar el portón
 	agregarFloresBarda(glm::vec3(15.25f, 0.0f, 49.75f), glm::vec3(27.3f, 0.0f, 49.75f), menosZ);
 	agregarFloresBarda(glm::vec3(37.3f, 0.0f, 49.75f), glm::vec3(49.75f, 0.0f, 49.75f), menosZ);
 }
 
-// ---------------- FLORES EN LAS ENTRADAS DEL PANTEON ----------------
-// Portón (barda sur): pilares de x = 29.9..30.7 y 33.9..34.7, alto 3.25,
-// caras en z = 49.65 (adentro) y 50.35 (afuera). Hojas del portón entre 30.7 y 33.9.
-// Corredor (barda oeste): hueco z = -5..5; la barda del panteón tiene su cara
-// interior en x = 15.25 y la del atrio su cara en x = 9.75.
+// Flores y velas alternadas al pie de las bardas del atrio, igual que en el panteón
+// Bardas del atrio por dentro: oeste x = -49.75, este x = 9.75 (corredor en z = -4.88..4.88),
+// norte z = -49.75 y sur z = 49.75 (arco de entrada entre x = -24.25 y -15.75).
+void agregarFloresPerimetroAtrio()
+{
+	const glm::vec3 masX(1.0f, 0.0f, 0.0f), menosX(-1.0f, 0.0f, 0.0f);
+	const glm::vec3 masZ(0.0f, 0.0f, 1.0f), menosZ(0.0f, 0.0f, -1.0f);
+
+	// Barda oeste
+	agregarFloresBarda(glm::vec3(-49.75f, 0.0f, -49.75f), glm::vec3(-49.75f, 0.0f, 49.75f), masX);
+	// Barda este, sin tapar el corredor
+	agregarFloresBarda(glm::vec3(9.75f, 0.0f, -49.75f), glm::vec3(9.75f, 0.0f, -5.3f), menosX);
+	agregarFloresBarda(glm::vec3(9.75f, 0.0f, 5.3f), glm::vec3(9.75f, 0.0f, 49.75f), menosX);
+	// Barda norte, detrás de la iglesia
+	agregarFloresBarda(glm::vec3(-49.75f, 0.0f, -49.75f), glm::vec3(9.75f, 0.0f, -49.75f), masZ);
+	// Barda sur, sin tapar el arco
+	agregarFloresBarda(glm::vec3(-49.75f, 0.0f, 49.75f), glm::vec3(-24.6f, 0.0f, 49.75f), menosZ);
+	agregarFloresBarda(glm::vec3(-15.4f, 0.0f, 49.75f), glm::vec3(9.75f, 0.0f, 49.75f), menosZ);
+}
+
+// Arriates de flores a los lados del portón del panteón, por dentro
 void agregarFloresEntradas()
 {
-	// Arriates a los dos lados del portón, por dentro: 3 hileras densas
+	// Arriates a los lados del portón
 	for (int fila = 0; fila < 3; fila++)
 	{
 		float z = 49.25f - fila * 0.45f;
 		float desfase = (fila % 2) * 0.22f;
-		for (float x = 27.5f + desfase; x <= 29.7f; x += 0.45f) agregarFlor(glm::vec3(x, 0.0f, z), 0.38f);
-		for (float x = 34.9f + desfase; x <= 37.1f; x += 0.45f) agregarFlor(glm::vec3(x, 0.0f, z), 0.38f);
+		for (float x = 27.5f + desfase; x <= 29.7f; x += 0.45f) agregarFlor(glm::vec3(x, 0.0f, z));
+		for (float x = 34.9f + desfase; x <= 37.1f; x += 0.45f) agregarFlor(glm::vec3(x, 0.0f, z));
 	}
-
-	// Pilares del portón: flores subiendo por las dos caras y una grande encima
-	const float xPilar[2] = { 30.3f, 34.3f };
-	for (int k = 0; k < 2; k++)
-	{
-		for (float y = 0.5f; y <= 2.9f; y += 0.6f)
-		{
-			agregarFlorPared(glm::vec3(xPilar[k], y, 50.36f), glm::vec3(0.0f, 0.0f, 1.0f), 0.38f);
-			agregarFlorPared(glm::vec3(xPilar[k], y, 49.64f), glm::vec3(0.0f, 0.0f, -1.0f), 0.38f);
-		}
-		agregarFlorPared(glm::vec3(xPilar[k], 3.25f, 50.0f), glm::vec3(0.0f, 1.0f, 0.0f), 0.6f);
-	}
-
-	// Entrada por el corredor: flores subiendo a los dos lados del hueco,
-	// del lado del panteón (mirando a +X) y del lado del atrio (mirando a -X)
-	const float zLado[2] = { -5.4f, 5.4f };
-	for (int k = 0; k < 2; k++)
-		for (float y = 0.5f; y <= 2.6f; y += 0.5f)
-		{
-			agregarFlorPared(glm::vec3(15.26f, y, zLado[k]), glm::vec3(1.0f, 0.0f, 0.0f), 0.35f);
-			agregarFlorPared(glm::vec3(9.74f, y, zLado[k]), glm::vec3(-1.0f, 0.0f, 0.0f), 0.35f);
-		}
 }
 
+// Arma el sendero completo con sus flores y velas (se llama una vez al iniciar)
 void construirSendero()
 {
-	// 0. Leer el piso del panteón para conocer su altura (montículos de las tumbas)
+	// Altura del piso del panteón
 	cargarPisoPanteon("assets/models/edificacion/piso_panteon.obj");
 
-	// 1. Frente de la ofrenda -> corredor -> pasillo central del panteón
-	//    Sale del frente del altar, cruza la explanada con una curva suave
-	//    y entra al corredor del panteón (x = 10..15, z = -5..5).
+	// Camino de la ofrenda al pasillo central del panteón, pasando por el corredor
 	glm::vec3 ruta[] = {
 		glm::vec3(posAltar.x, 0.0f, altarZ1 + 0.9f),
 		glm::vec3(-13.0f, 0.0f, 4.6f),
@@ -603,13 +586,13 @@ void construirSendero()
 	const int numPuntosRuta = sizeof(ruta) / sizeof(ruta[0]);
 	for (int i = 0; i < numPuntosRuta - 1; i++) agregarTramo(ruta[i], ruta[i + 1]);
 
-	// 2. Pasillo central hacia las tumbas de los dos lados
+	// Pasillo central hacia las tumbas
 	agregarTramo(glm::vec3(xPasillo, 0.0f, 0.0f), glm::vec3(xPasillo, 0.0f, -25.56f));
 	agregarTramo(glm::vec3(xPasillo, 0.0f, 0.0f), glm::vec3(xPasillo, 0.0f, 14.66f));
-	// ...y sigue hasta el portón, para que la entrada principal también tenga tapete
+	// Pasillo central hasta el portón
 	agregarTramo(glm::vec3(xPasillo, 0.0f, 14.66f), glm::vec3(xPasillo, 0.0f, 49.2f));
 
-	// 3. Un ramal a cada tumba (llega a 0.6 m del montículo)
+	// Un ramal a cada tumba
 	for (const Tumba& t : tumbas)
 	{
 		float zc = (t.z0 + t.z1) * 0.5f;
@@ -617,16 +600,15 @@ void construirSendero()
 		agregarTramo(glm::vec3(xPasillo, 0.0f, zc), glm::vec3(xFin, 0.0f, zc));
 	}
 
-	// 4. Flores y velas alrededor de la ofrenda: a los dos lados y al frente.
-	//    Flor, vela, flor, vela... con velas grande y chica intercaladas.
+	// Flores y velas alrededor de la ofrenda
 	{
-		const float sep = 0.4f;   // qué tan afuera del altar
+		const float sep = 0.4f;   // separación del altar
 		float xIzq = altarX0 - sep, xDer = altarX1 + sep, zFrente = altarZ1 + sep;
 		int k = 0;
 		for (float z = altarZ0 + 0.2f; z <= zFrente + 0.01f; z += 0.7f, k++)
 		{
-			agregarFlor(glm::vec3(xIzq, 0.0f, z), 0.34f);
-			agregarFlor(glm::vec3(xDer, 0.0f, z), 0.34f);
+			agregarFlor(glm::vec3(xIzq, 0.0f, z));
+			agregarFlor(glm::vec3(xDer, 0.0f, z));
 			if (z + 0.7f <= zFrente + 0.01f)
 			{
 				agregarVela(glm::vec3(xIzq, 0.0f, z + 0.35f), k % 2 == 0);
@@ -636,22 +618,23 @@ void construirSendero()
 		k = 0;
 		for (float x = xIzq + 0.7f; x < xDer - 0.3f; x += 0.7f, k++)
 		{
-			agregarFlor(glm::vec3(x, 0.0f, zFrente), 0.34f);
+			agregarFlor(glm::vec3(x, 0.0f, zFrente));
 			agregarVela(glm::vec3(x + 0.35f, 0.0f, zFrente), k % 2 == 0);
 		}
 	}
 
-	// 5. Arriates al pie de toda la barda del panteón
+	// Flores y velas en las bardas del panteón
 	agregarFloresPerimetroPanteon();
+	agregarFloresPerimetroAtrio();
 
+	// Quita lo que quedó encima del camino
 	quitarFloresSobreSendero();
 
-	// 6. Marco de 10 flores en cada una de las 6 tumbas (después de la limpieza
-	//    para que siempre queden las 10 completas, aunque toquen el ramal)
+	// Marco de cada tumba (después de la limpieza para que quede completo)
 	for (const Tumba& t : tumbas)
 		agregarContornoTumba(t);
 
-	// 7. Flores en el arco del atrio y en las dos entradas del panteón
+	// Flores del arco del atrio y arriates del portón del panteón
 	agregarFloresArco();
 	agregarFloresEntradas();
 
@@ -659,45 +642,75 @@ void construirSendero()
 		<< matFlores.size() << " flores, " << velas.size() << " velas" << std::endl;
 }
 
+// Velocidad de cambio de la luz de colores
 glm::vec3 Light1 = glm::vec3(0);
 
-// =====================================================================
-//  NOCHE: LUZ DE LUNA, NIEBLA Y LUZ DE LAS VELAS
-//  (van con Shader/lighting.frag; todos los valores se ajustan aquí)
-// =====================================================================
-// Luna: luz de noche clara, apenas azulada para que se sigan viendo los colores
-// de los modelos. Para más oscuro bájalos; para más claro súbelos.
+// Iluminación de noche (se usa junto con Shader/lighting.frag)
+
+// Luz de la luna
 const glm::vec3 LUNA_AMBIENTE(0.24f, 0.25f, 0.30f);
 const glm::vec3 LUNA_DIFUSA(0.38f, 0.40f, 0.48f);
 const glm::vec3 LUNA_ESPECULAR(0.08f, 0.08f, 0.10f);
 
-// Niebla nocturna: color del horizonte del skybox y qué tan espesa es
+// Niebla
 const glm::vec3 NIEBLA_COLOR(0.02f, 0.025f, 0.05f);
-const float NIEBLA_DENSIDAD = 0.014f;   // más ligera para que no apague los colores
+const float NIEBLA_DENSIDAD = 0.014f;
 
 // Luz de las velas
 const glm::vec3 COLOR_VELA(1.0f, 0.55f, 0.20f);   // naranja cálido
-const float BRILLO_VELAS = 1.3f;          // resplandor general de todas las velas (mapa)
-const float INTENSIDAD_LUZ_VELA = 1.2f;   // fuerza de cada vela cercana a la cámara
-const float ALTURA_LUZ_VELAS = 2.5f;      // a partir de esta altura ya no llega el resplandor
-const int   MAX_LUCES_VELA = 16;          // debe coincidir con MAX_LUCES_VELA del shader
+const float BRILLO_VELAS = 1.3f;   // resplandor de todas las velas
+const float INTENSIDAD_LUZ_VELA = 1.2f;   // luz de cada vela cercana
+const float ALTURA_LUZ_VELAS = 2.5f;   // altura hasta donde llega el resplandor
+const int   MAX_LUCES_VELA = 16;   // igual que en el shader
 
-// Mapa de luz de velas: textura vista desde arriba, de -60 a 60 m en x y en z
+// Mapa de luz de las velas (textura vista desde arriba, de -60 a 60 m)
 const glm::vec2 MAPA_MIN(-60.0f, -60.0f);
 const float MAPA_TAM = 120.0f;
-const int   MAPA_RES = 512;                // 512 x 512 texeles (~23 cm cada uno)
-const float RADIO_RESPLANDOR = 3.0f;       // hasta dónde llega la luz de una vela
+const int   MAPA_RES = 512;   // resolución del mapa
+const float RADIO_RESPLANDOR = 3.0f;   // alcance de la luz de una vela
 
-bool linterna = false;                     // tecla F: linterna de la cámara
+bool linterna = false;   // se prende con F
 
-// Parpadeo de una vela (lo usan la llama y su luz, así titilan juntas)
+// Faroles
+// farol1.obj es solo la cabeza del farol (0.73 de alto, sin textura); se pone sobre
+// un poste de hierro hecho con el cubo, con una llama adentro.
+struct Farol
+{
+	glm::vec3 pos;   // base del poste, sobre el piso
+};
+const int   MAX_FAROLES = 20;   // igual que en el shader
+const float ALTURA_POSTE = 2.4f;
+const float ESCALA_FAROL = 1.4f;   // cabeza de 1 m de alto
+const glm::vec3 COLOR_FAROL(1.0f, 0.78f, 0.45f);   // amarillo cálido
+const float INTENSIDAD_FAROL = 1.8f;
+const glm::vec3 COLOR_HIERRO(0.10f, 0.09f, 0.08f);
+
+std::vector<Farol> faroles = {
+	// Atrio: uno en cada esquina
+	{ glm::vec3(-47.0f, 0.0f, -47.0f) }, { glm::vec3(7.0f, 0.0f, -47.0f) },
+	{ glm::vec3(-47.0f, 0.0f, 44.0f) }, { glm::vec3(7.0f, 0.0f, 44.0f) },
+	// Calle: banqueta junto a las bardas (z = 50.25..53.5), a los lados del arco y del portón
+	{ glm::vec3(-26.5f, 0.0f, 52.7f) }, { glm::vec3(-13.5f, 0.0f, 52.7f) },
+	{ glm::vec3(27.5f, 0.0f, 52.7f) }, { glm::vec3(37.1f, 0.0f, 52.7f) },
+	// Calle: banqueta de enfrente (z = 63.5..67), junto a los árboles
+	{ glm::vec3(-40.0f, 0.0f, 64.3f) }, { glm::vec3(-5.0f, 0.0f, 64.3f) },
+	{ glm::vec3(25.0f, 0.0f, 64.3f) }
+};
+
+// Punto de donde sale la luz del farol (dentro de la cabeza)
+glm::vec3 luzFarol(const Farol& f)
+{
+	return f.pos + glm::vec3(0.0f, ALTURA_POSTE + 0.3f * ESCALA_FAROL, 0.0f);
+}
+
+// Parpadeo de una vela (la llama y su luz usan el mismo)
 float parpadeoVela(const Vela& v, float tiempo)
 {
 	return 1.0f + 0.08f * sin(tiempo * 12.0f + v.fase)
 		+ 0.04f * sin(tiempo * 23.0f + 2.0f * v.fase);
 }
 
-// Se calcula UNA vez al iniciar: suma la luz de las 412 velas en cada texel.
+// Crea el mapa de luz de las velas; se calcula una sola vez al iniciar
 GLuint crearMapaLuzVelas()
 {
 	std::vector<float> luz(MAPA_RES * MAPA_RES, 0.0f);
@@ -706,7 +719,7 @@ GLuint crearMapaLuzVelas()
 
 	for (const Vela& v : velas)
 	{
-		float fuerza = v.sXZ / VELA_GRANDE_XZ;   // las chicas alumbran un poco menos
+		float fuerza = v.sXZ / VELA_GRANDE_XZ;   // las chicas alumbran menos
 		int cx = (int)((v.pos.x - MAPA_MIN.x) / texel);
 		int cz = (int)((v.pos.z - MAPA_MIN.y) / texel);
 		for (int j = cz - rt; j <= cz + rt; j++)
@@ -718,10 +731,10 @@ GLuint crearMapaLuzVelas()
 				float r = sqrt(wx * wx + wz * wz);
 				if (r >= RADIO_RESPLANDOR) continue;
 				float t = 1.0f - r / RADIO_RESPLANDOR;
-				luz[j * MAPA_RES + i] += fuerza * t * t;   // cae suave hacia la orilla
+				luz[j * MAPA_RES + i] += fuerza * t * t;   // se desvanece hacia la orilla
 			}
 	}
-	// Donde hay muchas velas juntas la luz se satura suave en vez de quemar el color
+	// Evita que se queme el color donde hay muchas velas juntas
 	for (float& l : luz) l = 1.0f - exp(-l);
 
 	GLuint id;
@@ -736,9 +749,8 @@ GLuint crearMapaLuzVelas()
 	return id;
 }
 
-// Cada cuadro: las MAX_LUCES_VELA velas más cercanas a la cámara se mandan al
-// shader como luces puntuales. Las que están por salir de la lista se apagan
-// poco a poco para que no "brinque" la luz al caminar.
+// Manda al shader las velas más cercanas a la cámara como luces.
+// Las que están por salir de la lista se apagan poco a poco.
 void mandarLucesVelas(GLuint programa, glm::vec3 posCam, float tiempo)
 {
 	std::vector<std::pair<float, int>> orden;
@@ -769,7 +781,7 @@ void mandarLucesVelas(GLuint programa, glm::vec3 posCam, float tiempo)
 	}
 }
 
-//Animacion del Esqueleto
+// Animación del esqueleto
 float skelWalkCycle = 0.0f;
 bool isWalking = false;
 
@@ -791,11 +803,11 @@ glm::vec3 dogPos(0.0f, 0.0f, 0.0f);
 float dogRot = 0.0f;
 bool step = false;
 
-// Deltatime
+// Tiempo entre cuadros
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
-//Estructuras para las colisiones
+// Colisiones
 struct BoundingBox {
 	float minX, maxX;
 	float minZ, maxZ;
@@ -810,9 +822,10 @@ std::vector<BoundingBox> invisibleWalls = {
 	{  60.0f, 65.0f, -80.0f, 80.0f },
 	{  10.0f, 15.0f,  5.0f,  40.0f },
 	{  10.0f, 15.0f, -60.0f,  -4.75f },
-	{ -23.3f, -16.7f, -1.25f,  3.1f }   // ofrenda en el centro del atrio (posAltar, escala 0.8)
+	{ -23.3f, -16.7f, -1.25f,  3.1f }   // ofrenda
 };
 
+// Revisa si el esqueleto choca con alguna pared invisible
 bool CheckCollision(glm::vec3 pos)
 {
 	float skeletonRadius = 0.5f;
@@ -830,6 +843,7 @@ bool CheckCollision(glm::vec3 pos)
 
 int main()
 {
+	// Inicializar GLFW y crear la ventana
 	glfwInit();
 
 	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto Dia de Muertos", nullptr, nullptr);
@@ -847,6 +861,7 @@ int main()
 	glfwSetKeyCallback(window, KeyCallback);
 	glfwSetCursorPosCallback(window, MouseCallback);
 
+	// Inicializar GLEW
 	glewExperimental = GL_TRUE;
 	if (GLEW_OK != glewInit())
 	{
@@ -856,11 +871,12 @@ int main()
 
 	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
+	// Shaders
 	Shader lightingShader("Shader/lighting.vs", "Shader/lighting.frag");
 	Shader lampShader("Shader/lamp.vs", "Shader/lamp.frag");
 	Shader SkyBoxshader("Shader/SkyBox.vs", "Shader/SkyBox.frag");
 
-	// Modelos
+	// Carga de modelos: esqueleto
 	Model skeleton((char*)"assets/models/skeleton/skeleton.obj");
 	Model craneo((char*)"assets/models/skeleton/craneo.obj");
 	Model antebrazoDer((char*)"assets/models/skeleton/antebrazoDer.obj");
@@ -877,7 +893,7 @@ int main()
 	Model piernaDer((char*)"assets/models/skeleton/piernaDer.obj");
 	Model piernaIzq((char*)"assets/models/skeleton/piernaIzq.obj");
 
-	// Edificación
+	// Carga de modelos: edificación y adornos
 	Model arcoEntrada((char*)"assets/models/edificacion/atrio_arco_entrada.obj");
 	Model corredor((char*)"assets/models/edificacion/corredor_panteon.obj");
 	Model cruzMadera1((char*)"assets/models/edificacion/cruz_pequena.obj");
@@ -903,17 +919,16 @@ int main()
 	Model senderoPetalos((char*)"assets/models/edificacion/sendero_petalos.obj");
 	Model vela((char*)"assets/models/edificacion/vela.obj");
 	Model velaLlama((char*)"assets/models/edificacion/vela_llama.obj");
+	Model farol((char*)"assets/models/edificacion/farol1.obj");
 
+	// Papel picado
 	glm::mat4 modeloBardas = glm::mat4(1.0f);
 	PapelPicado papelPicado;
 	papelPicado.cargar("Imagenes");
-	// Altura de amarre de TODOS los cordones. Las bardas miden 2.75; antes se amarraban
-	// a 2.76 y las banderitas quedaban muy bajas. Súbelo o bájalo aquí.
+	// Altura a la que se amarran los cordones del papel picado
 	const float yAmarrePapel = 3.5f;
 
-	// ---------------- PAPEL PICADO EN EL PANTEON ----------------
-	// Mismas tiras que papelPicado.colocarEnPanteon() (PapelPicado.h), pero a yAmarrePapel.
-	// Barda oeste x = 15.0, barda este x = 50.0; se salta z = -5..5 (corredor) y los árboles.
+	// Tiras del panteón, de barda a barda
 	{
 		const float zsPanteon[] = { -36.0f, -19.5f, 7.5f, 27.0f, 45.0f };
 		const float caidasPanteon[] = { 0.15f, 0.14f, 0.14f, 0.16f, 0.15f };
@@ -925,13 +940,9 @@ int main()
 		}
 	}
 
-	// ---------------- PAPEL PICADO EN EL ATRIO (frente a la iglesia) ----------------
-	// atrio_barda.obj (model = identidad): barda oeste x = -50.0, barda este x = 10.02.
-	// Cada par es (z en la barda oeste, z en la barda este). Algunas tiras van un poco
-	// diagonales para esquivar las copas de bosque.obj que asoman sobre las bardas
-	// y el hueco del corredor (z = -5..5 en la barda este).
+	// Tiras del atrio, de barda a barda (algunas en diagonal para esquivar los árboles)
 	const glm::vec2 tirasAtrio[] = {
-		glm::vec2(-11.5f, -10.5f),   // la más cercana a la fachada (z = -13.4)
+		glm::vec2(-11.5f, -10.5f),   // la más cercana a la iglesia
 		glm::vec2(14.0f,  11.0f),
 		glm::vec2(27.0f,  29.5f),
 		glm::vec2(46.5f,  46.5f)    // junto al arco de entrada
@@ -939,9 +950,14 @@ int main()
 	for (const glm::vec2& t : tirasAtrio)
 		papelPicado.agregarTira(glm::vec3(-50.0f, yAmarrePapel, t.x), glm::vec3(10.02f, yAmarrePapel, t.y), 0.15f, 0.55f);
 
-	// ---------------- SENDERO DE CEMPASUCHIL ----------------
+	// Sendero de cempasúchil, flores y velas
 	construirSendero();
 
+	// Los postes de los faroles también chocan
+	for (const Farol& f : faroles)
+		invisibleWalls.push_back({ f.pos.x - 0.25f, f.pos.x + 0.25f, f.pos.z - 0.25f, f.pos.z + 0.25f });
+
+	// Cubo de la luz de prueba
 	GLuint VBO, VAO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -953,7 +969,7 @@ int main()
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
-	// ---------------- SKYBOX: VAO, VBO, EBO ----------------
+	// Skybox
 	GLuint skyboxVAO, skyboxVBO, skyboxEBO;
 	glGenVertexArrays(1, &skyboxVAO);
 	glGenBuffers(1, &skyboxVBO);
@@ -967,7 +983,7 @@ int main()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
 	glBindVertexArray(0);
 
-	// ---------------- SKYBOX: texturas (orden +X, -X, +Y, -Y, +Z, -Z) ----------------
+	// Texturas del skybox (orden +X, -X, +Y, -Y, +Z, -Z)
 	std::vector<const GLchar*> faces;
 	faces.push_back("assets/textures/sky_right.png");
 	faces.push_back("assets/textures/sky_left.png");
@@ -976,19 +992,20 @@ int main()
 	faces.push_back("assets/textures/sky_front.png");
 	faces.push_back("assets/textures/sky_back.png");
 
-	stbi_set_flip_vertically_on_load(false);   // los cubemaps NO se voltean
+	stbi_set_flip_vertically_on_load(false);   // los cubemaps no se voltean
 	GLuint cubemapTexture = TextureLoading::LoadCubemap(faces);
 
 	SkyBoxshader.Use();
 	glUniform1i(glGetUniformLocation(SkyBoxshader.Program, "skybox"), 0);
 
+	// Texturas del material
 	lightingShader.Use();
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "material.diffuse"), 0);
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "material.specular"), 1);
 
-	// ---------------- NOCHE: valores fijos del shader ----------------
-	GLuint mapaLuzVelas = crearMapaLuzVelas();   // ya existen las velas (construirSendero)
-	glUniform1i(glGetUniformLocation(lightingShader.Program, "mapaVelas"), 5);   // unidad 5: Mesh usa la 0 y la 1
+	// Valores fijos de la iluminación de noche
+	GLuint mapaLuzVelas = crearMapaLuzVelas();   // se crea después de construirSendero
+	glUniform1i(glGetUniformLocation(lightingShader.Program, "mapaVelas"), 5);   // unidad de textura 5
 	glUniform2f(glGetUniformLocation(lightingShader.Program, "mapaMin"), MAPA_MIN.x, MAPA_MIN.y);
 	glUniform1f(glGetUniformLocation(lightingShader.Program, "mapaTam"), MAPA_TAM);
 	glUniform1f(glGetUniformLocation(lightingShader.Program, "alturaLuzVelas"), ALTURA_LUZ_VELAS);
@@ -996,13 +1013,27 @@ int main()
 	glUniform3f(glGetUniformLocation(lightingShader.Program, "colorNiebla"), NIEBLA_COLOR.x, NIEBLA_COLOR.y, NIEBLA_COLOR.z);
 	glUniform1f(glGetUniformLocation(lightingShader.Program, "densidadNiebla"), NIEBLA_DENSIDAD);
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "emisivo"), 0);
+	glUniform1i(glGetUniformLocation(lightingShader.Program, "usarColor"), 0);
 
+	// Luz de los faroles (no se mueven, se mandan una sola vez)
+	{
+		int n = std::min((int)faroles.size(), MAX_FAROLES);
+		glm::vec3 posFaroles[MAX_FAROLES];
+		for (int i = 0; i < n; i++) posFaroles[i] = luzFarol(faroles[i]);
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "numFaroles"), n);
+		glUniform3fv(glGetUniformLocation(lightingShader.Program, "farolPos"), n, glm::value_ptr(posFaroles[0]));
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "colorFarol"), COLOR_FAROL.x, COLOR_FAROL.y, COLOR_FAROL.z);
+		glUniform1f(glGetUniformLocation(lightingShader.Program, "intensidadFarol"), INTENSIDAD_FAROL);
+	}
+
+	// Proyección
 	glm::mat4 projection = glm::perspective(camera.GetZoom(), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 0.1f, 100.0f);
 
-	// Abrir y reproducir el MP3 en bucle (repeat)
+	// Música de fondo en bucle
 	mciSendString(TEXT("open \"assets/audio/lloronaCancion.mp3\" type mpegvideo alias musicaFondo"), NULL, 0, NULL);
 	mciSendString(TEXT("play musicaFondo repeat"), NULL, 0, NULL);
 
+	// Ciclo principal
 	while (!glfwWindowShouldClose(window))
 	{
 		GLfloat currentFrame = glfwGetTime();
@@ -1015,13 +1046,14 @@ int main()
 
 		camera.SetPosition(skeletonPos + glm::vec3(0.0f, 2.0f, -0.25f));
 
-		glClearColor(NIEBLA_COLOR.x, NIEBLA_COLOR.y, NIEBLA_COLOR.z, 1.0f);   // noche
+		glClearColor(NIEBLA_COLOR.x, NIEBLA_COLOR.y, NIEBLA_COLOR.z, 1.0f);   // color de fondo de noche
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glEnable(GL_DEPTH_TEST);
 
 		glm::mat4 modelTemp = glm::mat4(1.0f);
 
+		// Iluminación
 		lightingShader.Use();
 
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "diffuse"), 0);
@@ -1029,13 +1061,13 @@ int main()
 		GLint viewPosLoc = glGetUniformLocation(lightingShader.Program, "viewPos");
 		glUniform3f(viewPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 
-		// Luna (luz direccional de noche: tenue y azulada)
+		// Luna
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.direction"), -0.2f, -1.0f, -0.3f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.ambient"), LUNA_AMBIENTE.x, LUNA_AMBIENTE.y, LUNA_AMBIENTE.z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.diffuse"), LUNA_DIFUSA.x, LUNA_DIFUSA.y, LUNA_DIFUSA.z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.specular"), LUNA_ESPECULAR.x, LUNA_ESPECULAR.y, LUNA_ESPECULAR.z);
 
-		// Velas: mapa de resplandor (unidad 5) + las más cercanas como luces puntuales
+		// Velas: mapa de luz y velas cercanas
 		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D, mapaLuzVelas);
 		glActiveTexture(GL_TEXTURE0);
@@ -1043,6 +1075,7 @@ int main()
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "brilloVelas"), BRILLO_VELAS * pulso);
 		mandarLucesVelas(lightingShader.Program, camera.GetPosition(), currentFrame);
 
+		// Luz de colores (Espacio)
 		glm::vec3 lightColor;
 		lightColor.x = abs(sin(glfwGetTime() * Light1.x));
 		lightColor.y = abs(sin(glfwGetTime() * Light1.y));
@@ -1056,9 +1089,9 @@ int main()
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].linear"), 0.045f);
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].quadratic"), 0.075f);
 
+		// Linterna de la cámara (F)
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.position"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.direction"), camera.GetFront().x, camera.GetFront().y, camera.GetFront().z);
-		// Linterna de la cámara: apagada de inicio, se prende/apaga con F
 		float lin = linterna ? 1.0f : 0.0f;
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.ambient"), 0.0f, 0.0f, 0.0f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.diffuse"), 0.9f * lin, 0.85f * lin, 0.7f * lin);
@@ -1071,6 +1104,7 @@ int main()
 
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "material.shininess"), 5.0f);
 
+		// Matrices de vista y proyección
 		glm::mat4 view = camera.GetViewMatrix();
 
 		GLint modelLoc = glGetUniformLocation(lightingShader.Program, "model");
@@ -1082,7 +1116,7 @@ int main()
 
 		glm::mat4 model(1.0f);
 
-		// Dibujar Entorno
+		// Escenario
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-20.0f, -0.25f, 50.0f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -1130,16 +1164,15 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		pisoCementerio.Draw(lightingShader);
 		portonMarco.Draw(lightingShader);
-		// Estos modelos tienen su origen en (0, 0, 0) y se dibujaban todos ahí, en medio
-		// del atrio; antes no se veían porque el altar estaba encima. La lápida y la cruz
-		// pequeña ya se dibujan en sus tumbas (posLapidas / posCruces) más abajo.
-		// Para usar los demás, ponles su glm::translate como a las lápidas.
+		// Estos modelos están en el origen y quedarían en medio del atrio;
+		// para usarlos hay que darles su posición con glm::translate.
 		// cruzPanteon.Draw(lightingShader);
 		// cruzMadera1.Draw(lightingShader);
 		// cruzMadera2.Draw(lightingShader);
 		// lapida1.Draw(lightingShader);
 		// farol1.Draw(lightingShader);
 
+		// Lápidas y cruces
 		for (int i = 0; i < 4; i++)
 		{
 			model = glm::mat4(1.0f);
@@ -1155,6 +1188,7 @@ int main()
 			cruzMadera1.Draw(lightingShader);
 		}
 
+		// Portón: cada hoja gira sobre su bisagra
 		glm::mat4 portonBase = glm::mat4(1.0f);
 		portonBase = glm::translate(portonBase, portonCentro);
 		portonBase = glm::rotate(portonBase, glm::radians(portonRotY), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -1171,7 +1205,7 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		portonDerecha.Draw(lightingShader);
 
-		// Ofrenda: centro de la explanada del atrio, más grande (posAltar, escalaAltar)
+		// Ofrenda
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, posAltar);
 		model = glm::scale(model, glm::vec3(escalaAltar));
@@ -1179,7 +1213,7 @@ int main()
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		altar.Draw(lightingShader);
 
-		// Papel picado del altar: misma posición y escala que el altar
+		// Papel picado del altar
 		model = glm::mat4(1.0f);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1191,14 +1225,12 @@ int main()
 		glDisable(GL_BLEND);
 		glBindVertexArray(0);
 
-		// ---------------- SENDERO DE CEMPASUCHIL, FLORES Y VELAS ----------------
-		// Solo se dibuja lo que está a menos de DISTANCIA_ADORNOS de la cámara:
-		// más lejos se ve como un punto y dibujarlo solo baja los FPS.
+		// Sendero, flores y velas (solo lo que está cerca de la cámara)
 		glm::vec3 posCam = camera.GetPosition();
 		const float dMax2 = DISTANCIA_ADORNOS * DISTANCIA_ADORNOS;
 
 		GLint transpLoc = glGetUniformLocation(lightingShader.Program, "transparency");
-		glUniform1i(transpLoc, 1);   // descarta el fondo transparente de petalos_sendero.png
+		glUniform1i(transpLoc, 1);   // descarta el fondo transparente de los pétalos
 		for (const glm::mat4& m : matPetalos)
 		{
 			if (distancia2(glm::vec3(m[3].x, m[3].y, m[3].z), posCam) > dMax2) continue;
@@ -1213,7 +1245,7 @@ int main()
 			cempasuchil.Draw(lightingShader);
 		}
 
-		// Cuerpo de las velas (cera + mecha). Las llamas van al final del cuadro, con blending.
+		// Velas (las llamas se dibujan al final)
 		for (const Vela& v : velas)
 		{
 			if (distancia2(v.pos, posCam) > dMax2) continue;
@@ -1223,9 +1255,37 @@ int main()
 			vela.Draw(lightingShader);
 		}
 
+		// Faroles: base y poste con el cubo, y la cabeza con farol1.obj, en color hierro
+		GLint usarColorLoc = glGetUniformLocation(lightingShader.Program, "usarColor");
+		glUniform1i(usarColorLoc, 1);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "colorPlano"), COLOR_HIERRO.x, COLOR_HIERRO.y, COLOR_HIERRO.z);
+		for (const Farol& f : faroles)
+		{
+			glBindVertexArray(VAO);
+
+			glm::mat4 mf = glm::translate(glm::mat4(1.0f), f.pos + glm::vec3(0.0f, 0.1f, 0.0f));
+			mf = glm::scale(mf, glm::vec3(0.36f, 0.2f, 0.36f));   // base
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(mf));
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+
+			mf = glm::translate(glm::mat4(1.0f), f.pos + glm::vec3(0.0f, ALTURA_POSTE * 0.5f, 0.0f));
+			mf = glm::scale(mf, glm::vec3(0.1f, ALTURA_POSTE, 0.1f));   // poste
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(mf));
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+			glBindVertexArray(0);
+
+			mf = glm::translate(glm::mat4(1.0f), f.pos + glm::vec3(0.0f, ALTURA_POSTE, 0.0f));
+			mf = glm::scale(mf, glm::vec3(ESCALA_FAROL));   // cabeza
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(mf));
+			farol.Draw(lightingShader);
+		}
+		glUniform1i(usarColorLoc, 0);
+
+		// Papel picado del atrio y del panteón
 		papelPicado.dibujar(lightingShader, currentFrame);
 
 
+		// Esqueleto
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, skeletonPos);
 		model = glm::rotate(model, glm::radians(skeletonYaw), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -1234,15 +1294,15 @@ int main()
 
 		modelTemp = model;
 
-		// 1. PECHO / TORSO
+		// Pecho
 		pecho.Draw(lightingShader);
 
-		// 2. CRÁNEO
+		// Cráneo
 		model = modelTemp;
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		craneo.Draw(lightingShader);
 
-		// 3. BRAZO DERECHO: rotación desde hombro y codo (no desde el origen del modelo)
+		// Brazo derecho: gira desde el hombro y el codo
 		const glm::vec3 hombroDer(-0.28f, 1.30f, 0.0f);
 		const glm::vec3 codoDer(-0.286f, 1.00f, -0.02f);
 		const glm::vec3 hombroIzq(0.28f, 1.30f, 0.0f);
@@ -1261,7 +1321,7 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		brazoDer.Draw(lightingShader);
 
-		// Codo derecho: el antebrazo hereda el movimiento del hombro
+		// Codo derecho
 		model = brazoDerModel;
 		model = glm::translate(model, codoDer);
 		model = glm::rotate(model, glm::radians(skelForearmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -1270,7 +1330,7 @@ int main()
 		antebrazoDer.Draw(lightingShader);
 		manoDer.Draw(lightingShader);
 
-		// 4. BRAZO IZQUIERDO
+		// Brazo izquierdo
 		glm::mat4 brazoIzqModel = modelTemp;
 		brazoIzqModel = glm::translate(brazoIzqModel, hombroIzq);
 		brazoIzqModel = glm::rotate(brazoIzqModel, glm::radians(-skelArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -1287,7 +1347,7 @@ int main()
 		antebrazoIzq.Draw(lightingShader);
 		manoIzq.Draw(lightingShader);
 
-		// 5. PIERNA DERECHA: movimiento desde la cadera y flexión desde la rodilla
+		// Pierna derecha: gira desde la cadera y la rodilla
 		glm::mat4 piernaDerModel = modelTemp;
 		piernaDerModel = glm::translate(piernaDerModel, caderaDer);
 		piernaDerModel = glm::rotate(piernaDerModel, glm::radians(-skelLegAngle), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -1304,7 +1364,7 @@ int main()
 		piernaDer.Draw(lightingShader);
 		pieDer.Draw(lightingShader);
 
-		// 6. PIERNA IZQUIERDA
+		// Pierna izquierda
 		glm::mat4 piernaIzqModel = modelTemp;
 		piernaIzqModel = glm::translate(piernaIzqModel, caderaIzq);
 		piernaIzqModel = glm::rotate(piernaIzqModel, glm::radians(skelLegAngle), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -1321,12 +1381,12 @@ int main()
 		piernaIzq.Draw(lightingShader);
 		pieIzq.Draw(lightingShader);
 
-		// 7. ESQUELETO GENERAL BASE
+		// Resto del esqueleto
 		model = modelTemp;
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		skeleton.Draw(lightingShader);
 
-		// Lamp object
+		// Cubo de la luz de prueba
 		lampShader.Use();
 		modelLoc = glGetUniformLocation(lampShader.Program, "model");
 		viewLoc = glGetUniformLocation(lampShader.Program, "view");
@@ -1335,9 +1395,7 @@ int main()
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-		// Cubo blanco de la luz de prueba (teclas T G Y H U J). Estaba en (0, 2, 0),
-		// escondido dentro del altar viejo; con el altar en su nuevo lugar quedaría
-		// flotando en medio del sendero, así que solo se dibuja si DIBUJAR_LAMPARA es true.
+		// Solo se dibuja si DIBUJAR_LAMPARA es true
 		const bool DIBUJAR_LAMPARA = false;
 		if (DIBUJAR_LAMPARA)
 		{
@@ -1350,10 +1408,10 @@ int main()
 			glBindVertexArray(0);
 		}
 
-		// ---------------- SKYBOX (siempre al final de la escena) ----------------
-		glDepthFunc(GL_LEQUAL);   // el skybox queda a profundidad 1.0 y solo se pinta donde no hay geometria
+		// Skybox (al final de la escena)
+		glDepthFunc(GL_LEQUAL);   // solo se pinta donde no hay geometría
 		SkyBoxshader.Use();
-		glm::mat4 skyView = glm::mat4(glm::mat3(camera.GetViewMatrix()));   // sin traslacion: el cielo sigue a la camara
+		glm::mat4 skyView = glm::mat4(glm::mat3(camera.GetViewMatrix()));   // sin traslación: el cielo sigue a la cámara
 		glUniformMatrix4fv(glGetUniformLocation(SkyBoxshader.Program, "view"), 1, GL_FALSE, glm::value_ptr(skyView));
 		glUniformMatrix4fv(glGetUniformLocation(SkyBoxshader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glBindVertexArray(skyboxVAO);
@@ -1361,30 +1419,37 @@ int main()
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
-		glDepthFunc(GL_LESS);     // regresar al valor normal
+		glDepthFunc(GL_LESS);   // valor normal
 
-		// ---------------- LLAMAS DE LAS VELAS (lo último del cuadro) ----------------
-		// Van después del skybox para que el cielo no las tape. No escriben profundidad
-		// (glDepthMask false) pero sí respetan la de la escena: una barda las tapa.
+		// Llamas de las velas
+		// Van después del skybox para que no las tape; usan blending y no escriben profundidad.
 		lightingShader.Use();
 		modelLoc = glGetUniformLocation(lightingShader.Program, "model");
 		GLint emisivoLoc = glGetUniformLocation(lightingShader.Program, "emisivo");
-		glUniform1i(emisivoLoc, 1);   // la llama brilla sola: no la oscurece la noche
+		glUniform1i(emisivoLoc, 1);   // la llama brilla sola
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
 
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);   // suma de color: se ve luminosa
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);   // mezcla aditiva: se ve luminosa
 		glDepthMask(GL_FALSE);
 		for (const Vela& v : velas)
 		{
 			if (distancia2(v.pos, posCam) > dMax2) continue;
-			// Parpadeo: dos senos con desfase propio para que cada vela titile distinto
 			float flick = parpadeoVela(v, currentFrame);   // mismo parpadeo que su luz
-			float vaiven = 4.0f * sin(currentFrame * 3.0f + v.fase);   // grados
+			float vaiven = 4.0f * sin(currentFrame * 3.0f + v.fase);   // vaivén en grados
 
 			glm::mat4 l = glm::translate(glm::mat4(1.0f), v.pos + glm::vec3(0.0f, v.sY, 0.0f));
 			l = glm::rotate(l, glm::radians(vaiven), glm::vec3(0.0f, 0.0f, 1.0f));
 			l = glm::scale(l, glm::vec3(v.sXZ, v.sXZ * flick, v.sXZ));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(l));
+			velaLlama.Draw(lightingShader);
+		}
+		// Llama dentro de cada farol
+		for (const Farol& f : faroles)
+		{
+			float flick = 1.0f + 0.05f * sin(currentFrame * 10.0f + f.pos.x);
+			glm::mat4 l = glm::translate(glm::mat4(1.0f), f.pos + glm::vec3(0.0f, ALTURA_POSTE + 0.12f * ESCALA_FAROL, 0.0f));
+			l = glm::scale(l, glm::vec3(1.3f, 1.3f * flick, 1.3f));
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(l));
 			velaLlama.Draw(lightingShader);
 		}
@@ -1396,19 +1461,20 @@ int main()
 		glfwSwapBuffers(window);
 	}
 
-	// Liberar recursos del skybox
+	// Liberar el skybox
 	glDeleteVertexArrays(1, &skyboxVAO);
 	glDeleteBuffers(1, &skyboxVBO);
 	glDeleteBuffers(1, &skyboxEBO);
 	glDeleteTextures(1, &cubemapTexture);
 
-	// Detener y cerrar la música de fondo al salir
+	// Cerrar la música
 	mciSendString(TEXT("close musicaFondo"), NULL, 0, NULL);
 
 	glfwTerminate();
 	return 0;
 }
 
+// Movimiento del esqueleto y la cámara
 void DoMovement()
 {
 	GLfloat cameraSpeed = 5.0f * deltaTime;
@@ -1422,13 +1488,13 @@ void DoMovement()
 	right = glm::normalize(right);
 
 
-	// 1. Obtenemos el ángulo hacia donde apunta la cámara actualmente
+	// Ángulo hacia donde mira la cámara
 	float targetYaw = glm::degrees(atan2(front.x, front.z));
 
-	// 2. Interpolamos suavemente (Lerp) para que el esqueleto rote de forma retardada/más lenta que la cámara
-	float rotationSpeed = 10.0f; // Sube este número si quieres que gire más rápido, bájalo para más inercia
+	// El esqueleto gira poco a poco hacia ese ángulo
+	float rotationSpeed = 10.0f;   // más alto = gira más rápido
 
-	// Manejo seguro del salto de ángulo en 360 grados para evitar giros raros
+	// Evita giros raros al pasar de 360 a 0 grados
 	float diff = targetYaw - skeletonYaw;
 	while (diff < -180.0f) diff += 360.0f;
 	while (diff > 180.0f) diff -= 360.0f;
@@ -1476,6 +1542,7 @@ void DoMovement()
 		isWalking = false;
 	}
 
+	// Mover la luz de prueba
 	if (keys[GLFW_KEY_T]) { pointLightPositions[0].x += 0.01f; }
 	if (keys[GLFW_KEY_G]) { pointLightPositions[0].x -= 0.01f; }
 	if (keys[GLFW_KEY_Y]) { pointLightPositions[0].y += 0.01f; }
@@ -1484,6 +1551,7 @@ void DoMovement()
 	if (keys[GLFW_KEY_J]) { pointLightPositions[0].z += 0.01f; }
 }
 
+// Teclado
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	if (GLFW_KEY_ESCAPE == key && GLFW_PRESS == action)
@@ -1526,7 +1594,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 
 	if (key == GLFW_KEY_F && action == GLFW_PRESS)
 	{
-		linterna = !linterna;   // linterna de la cámara
+		linterna = !linterna;
 	}
 
 	if (key == GLFW_KEY_O && action == GLFW_PRESS)
@@ -1535,17 +1603,18 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	}
 }
 
+// Animaciones
 void Animation()
 {
 	if (isWalking)
 	{
 		skelWalkCycle += deltaTime * 7.0f;
 
-		// Brazos y piernas alternan como en una caminata natural.
+		// Brazos y piernas alternan al caminar
 		skelArmAngle = sin(skelWalkCycle) * 15.0f;
 		skelLegAngle = sin(skelWalkCycle) * 16.0f;
 
-		// Flexión suave del codo y de la rodilla durante el paso.
+		// Flexión del codo y la rodilla
 		skelForearmAngle = (0.5f - 0.5f * cos(skelWalkCycle)) * 10.0f;
 		skelKneeAngle = (0.5f - 0.5f * cos(skelWalkCycle + 3.14159265f)) * 12.0f;
 	}
@@ -1564,6 +1633,7 @@ void Animation()
 		anguloPorton = glm::max(anguloPorton - velPorton * deltaTime, objetivo);
 }
 
+// Mouse
 void MouseCallback(GLFWwindow* window, double xPos, double yPos)
 {
 	if (firstMouse)
