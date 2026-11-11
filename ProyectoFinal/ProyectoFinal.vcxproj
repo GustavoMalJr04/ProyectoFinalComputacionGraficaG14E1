@@ -22,6 +22,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FichasCulturales.h" />
     <ClInclude Include="MariposaKeyframes.h" />
     <ClInclude Include="PapelPicado.h" />
   </ItemGroup>
