@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FichasCulturales.h" />
+    <ClInclude Include="Humo.h" />
     <ClInclude Include="MariposaKeyframes.h" />
     <ClInclude Include="PapelPicado.h" />
   </ItemGroup>
