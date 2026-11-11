@@ -35,6 +35,7 @@
 #include "PapelPicado.h"   // tiras de papel picado
 #include "Texture.h"   // carga del skybox
 #include "MariposaKeyframes.h"   // mariposas monarca animadas por keyframes
+#include "Humo.h"   // humo del copal (partículas)
 #include "FichasCulturales.h"    // fichas de información cultural (E abre / siguiente, Q cierra)
 
 // Prototipos de funciones
@@ -204,6 +205,14 @@ const float escalaAltar = 0.8f;   // 6.4 m de ancho y 3.6 m de alto
 // Medidas del altar ya colocado, para acomodar flores, velas y la colisión
 const float altarX0 = -20.0f - 4.0f * 0.8f, altarX1 = -20.0f + 4.0f * 0.8f;
 const float altarZ0 = -1.42f * 0.8f, altarZ1 = 3.71f * 0.8f;
+
+// Copalero en el nivel superior del altar.
+// Nivel superior de altar.obj: y = 4.5, x de -1.5 a 1.5, z de -1.41 a 0.59 (sin escalar).
+// Va centrado en x y cerca del frente (z = 0.20) para que se vea desde el piso.
+const float escalaCopalero = 2.0f;   // copalero.obj mide 15 cm de alto -> 30 cm
+const glm::vec3 posCopalero(posAltar.x, 4.5f * escalaAltar, posAltar.z + 0.20f);
+// Punto de donde saldrá el humo: fondo de la copa (y = 0.11 en copalero.obj)
+const glm::vec3 origenHumoCopal = posCopalero + glm::vec3(0.0f, 0.11f * escalaCopalero, 0.0f);
 
 // Tumbas del panteón
 // Montículo de tierra de cada tumba, medido de piso_panteon.obj: x0, x1, z0, z1
@@ -892,6 +901,7 @@ int main()
 	Shader lightingShader("Shader/lighting.vs", "Shader/lighting.frag");
 	Shader lampShader("Shader/lamp.vs", "Shader/lamp.frag");
 	Shader SkyBoxshader("Shader/SkyBox.vs", "Shader/SkyBox.frag");
+	Shader humoShader("Shader/humo.vs", "Shader/humo.frag");
 
 	// Carga de modelos: esqueleto
 	Model skeleton((char*)"assets/models/skeleton/skeleton.obj");
@@ -929,6 +939,12 @@ int main()
 	Model portonMarco((char*)"assets/models/edificacion/porton_marco.obj");
 	Model altar((char*)"assets/models/edificacion/altar.obj");
 	Model papelPicadoAltar((char*)"assets/models/edificacion/papelPicadoAltar.obj");
+	Model copalero((char*)"assets/models/edificacion/copalero.obj");
+
+	// Humo del copal: sale del fondo de la copa
+	Humo humoCopal(origenHumoCopal, 1.5f, 200, 40.0f);
+	humoCopal.colorNiebla = NIEBLA_COLOR;
+	humoCopal.densidadNiebla = NIEBLA_DENSIDAD;
 	Model avenida((char*)"assets/models/edificacion/avenida.obj");
 	Model bosque((char*)"assets/models/edificacion/bosque.obj");
 	Model cesped((char*)"assets/models/edificacion/cesped.obj");
@@ -1272,6 +1288,13 @@ int main()
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		altar.Draw(lightingShader);
 
+		// Copalero en el nivel superior del altar
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, posCopalero);
+		model = glm::scale(model, glm::vec3(escalaCopalero));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		copalero.Draw(lightingShader);
+
 		// Papel picado del altar
 		model = glm::mat4(1.0f);
 		glEnable(GL_BLEND);
@@ -1524,6 +1547,10 @@ int main()
 		glDisable(GL_BLEND);
 		glUniform1i(emisivoLoc, 0);
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+
+		// Humo del copal (transparente: va al final, después del skybox y las llamas)
+		humoCopal.Actualizar(deltaTime, currentFrame);
+		humoCopal.Dibujar(humoShader.Program, view, projection, camera.GetPosition(), currentFrame);
 
 		// Fichas culturales: tarjetas flotantes en el mundo y, al final, la ficha en pantalla
 		fichas.dibujarMarcadores(view, projection, camera.GetPosition(), currentFrame);
