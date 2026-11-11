@@ -7,7 +7,7 @@
 //  ¿QUÉ HACE ESTE ARCHIVO?
 //
 //  1) VUELO (cuadros clave de trayectoria)
-//     Cada cuadro clave guarda una "foto" de la mariposa:
+//     Cada cuadro clave guarda un frame de la mariposa:
 //        posición (X, Y, Z) + giro en Y + inclinación en X.
 //     Entre un cuadro clave y el siguiente se hace INTERPOLACIÓN LINEAL:
 //        incremento = (valorDestino - valorOrigen) / pasosEntreCuadros
@@ -23,17 +23,12 @@
 //     ala -20                    <- cuadro clave del aleteo
 //     ala 70
 //     -1.00 5.00 -27.00 180 0    <- cuadro clave del vuelo: x y z giroY inclinacionX
-//     CargarDesdeArchivo() lo lee y GuardarEnArchivo() lo escribe.
+//     
 //
 //  3) MODELADO JERÁRQUICO
 //     cuerpo (padre)  ->  ala izquierda y ala derecha (hijas)
 //     La matriz de cada ala = matriz del cuerpo × rotación de la bisagra,
 //     por eso las alas siguen al cuerpo a donde vaya.
-//
-//  REQUISITOS DE LOS .obj (Blender o los de respaldo):
-//     - Cabeza hacia -Z (el "frente" de OpenGL)
-//     - Ala derecha en x > 0, ala izquierda en x < 0
-//     - La bisagra de las alas sobre el eje Z (x = 0, y = 0)
 // =====================================================================
 
 #include <cstdio>
@@ -82,13 +77,13 @@ struct PoseAla
 class MariposaKeyframes
 {
 public:
-    // ------------------- Parámetros que puedes ajustar -------------------
+    // ------------------- Parámetros -------------------
     int   pasosEntreCuadros     = 120;    // pasos para ir de un cuadro clave al siguiente (120 = 2 s)
     int   pasosEntreAleteos     = 5;      // pasos entre "abajo" y "arriba" (5 → unos 6 aleteos por segundo)
     float pasosPorSegundo       = 60.0f;  // ritmo fijo de la animación (no depende de los FPS)
     float escala                = 0.10f;  // tamaño final del modelo
-    float correccionGiroGrados  = 0.0f;   // pon 180 si la mariposa vuela "de reversa"
-    float bisagraX              = 0.0f;   // si la bisagra del ala no quedó en x = 0
+	float correccionGiroGrados = 0.0f;   // para ajustar el sentido de la mariposa en el modelo 3D
+    float bisagraX              = 0.0f;   // colocar la bisagra en  x = 0
     glm::vec3 desplazamiento    = glm::vec3(0.0f); // se suma a la trayectoria (para que varias
                                                    // mariposas compartan el mismo archivo sin encimarse)
 
@@ -129,7 +124,7 @@ public:
     }
 
     // ------------------- Cuadros clave -------------------
-    // Agrega un cuadro clave escrito a mano en main.cpp
+    // Agrega un cuadro clave escrito en main.cpp
     void AgregarCuadroClave(float x, float y, float z, float giroY, float inclinacionX)
     {
         if (totalCuadrosClave >= MAX_CUADROS_CLAVE)
