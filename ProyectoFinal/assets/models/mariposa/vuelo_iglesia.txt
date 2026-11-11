@@ -1,0 +1,30 @@
+# Mariposa 1: vuelo ALREDEDOR DE LA IGLESIA
+# La iglesia se dibuja en (-20, 0, -30): ocupa x -32.9..-7.1, z -45.3..-13.4, torres de 25 m.
+# Ruta: elipse con centro (-20, -27), radios 19 m (X) y 21 m (Z), 20 cuadros clave.
+#  - pasa a ~3 m de altura frente a la fachada (se ve desde la explanada)
+#  - sube a ~7 m por detras del abside (arriba de la barda del atrio, 2.75 m)
+#  - queda al menos a 2.3 m de torres y muros en todo el recorrido
+# --- Cuadros clave del ALETEO: angulo de las alas en grados (+ = arriba) ---
+ala -20
+ala 70
+# --- Cuadros clave del VUELO: x  y  z  giroY(grados)  inclinacionX(grados) ---
+-1.00 5.00 -27.00 180.0 -0.5   # cuadro 0
+-1.93 4.91 -20.51 163.6 -1.1   # cuadro 1
+-4.63 4.70 -14.66 146.7 -2.7   # cuadro 2
+-8.83 4.30 -10.01 128.8 -4.5   # cuadro 3
+-14.13 3.76 -7.03 109.8 -5.5   # cuadro 4
+-20.00 3.20 -6.00 90.0 -4.8   # cuadro 5
+-25.87 2.82 -7.03 70.2 -2.2   # cuadro 6
+-31.17 2.78 -10.01 51.2 1.6   # cuadro 7
+-35.37 3.18 -14.66 33.3 5.5   # cuadro 8
+-38.07 3.97 -20.51 16.4 8.2   # cuadro 9
+-39.00 5.00 -27.00 0.0 9.2   # cuadro 10
+-38.07 6.03 -33.49 -16.4 8.2   # cuadro 11
+-35.37 6.82 -39.34 -33.3 5.5   # cuadro 12
+-31.17 7.22 -43.99 -51.2 1.6   # cuadro 13
+-25.87 7.18 -46.97 -70.2 -2.2   # cuadro 14
+-20.00 6.80 -48.00 -90.0 -4.8   # cuadro 15
+-14.13 6.24 -46.97 -109.8 -5.5   # cuadro 16
+-8.83 5.70 -43.99 -128.8 -4.5   # cuadro 17
+-4.63 5.30 -39.34 -146.7 -2.7   # cuadro 18
+-1.93 5.09 -33.49 -163.6 -1.1   # cuadro 19

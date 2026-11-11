@@ -34,6 +34,7 @@
 #include "Model.h"
 #include "PapelPicado.h"   // tiras de papel picado
 #include "Texture.h"   // carga del skybox
+#include "MariposaKeyframes.h"   // mariposas monarca animadas por keyframes
 
 // Prototipos de funciones
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -803,6 +804,18 @@ glm::vec3 dogPos(0.0f, 0.0f, 0.0f);
 float dogRot = 0.0f;
 bool step = false;
 
+// Mariposas monarca (animación por keyframes)
+// Cada mariposa lee sus cuadros clave (vuelo + aleteo) de su propio archivo.
+//   0 -> vuela alrededor de la iglesia
+//   1 -> vuela alrededor del altar
+const int NUM_MARIPOSAS = 2;
+const char* RUTAS_MARIPOSA[NUM_MARIPOSAS] = {
+	"assets/models/mariposa/vuelo_iglesia.txt",
+	"assets/models/mariposa/vuelo_altar.txt"
+};
+MariposaKeyframes* mariposas[NUM_MARIPOSAS] = { nullptr, nullptr };
+int mariposaEditada = 0;   // la que graban las teclas K / X / P (se elige con 1 y 2)
+
 // Tiempo entre cuadros
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
@@ -920,6 +933,33 @@ int main()
 	Model vela((char*)"assets/models/edificacion/vela.obj");
 	Model velaLlama((char*)"assets/models/edificacion/vela_llama.obj");
 	Model farol((char*)"assets/models/edificacion/farol1.obj");
+
+	// Mariposas: modelo jerárquico cuerpo (padre) -> ala izquierda y ala derecha (hijas).
+	// Los 3 modelos se cargan una vez y los comparten las dos mariposas.
+	Model mariposaCuerpo((char*)"assets/models/mariposa/cuerpo.obj");
+	Model mariposaAlaIzq((char*)"assets/models/mariposa/ala_izq.obj");
+	Model mariposaAlaDer((char*)"assets/models/mariposa/ala_der.obj");
+
+	MariposaKeyframes mariposaIglesia(&mariposaCuerpo, &mariposaAlaIzq, &mariposaAlaDer);
+	MariposaKeyframes mariposaAltar(&mariposaCuerpo, &mariposaAlaIzq, &mariposaAlaDer);
+	mariposas[0] = &mariposaIglesia;
+	mariposas[1] = &mariposaAltar;
+
+	// La de la iglesia se ve de lejos (10-20 m): más grande y más rápida.
+	mariposaIglesia.escala = 0.30f;            // ~1.2 m de punta a punta de ala
+	mariposaIglesia.pasosEntreCuadros = 120;   // 2 s entre cuadros clave
+	mariposaIglesia.pasosEntreAleteos = 5;
+	// La del altar se ve de cerca (3-6 m): más chica y más lenta.
+	mariposaAltar.escala = 0.15f;              // ~60 cm
+	mariposaAltar.pasosEntreCuadros = 90;      // 1.5 s entre cuadros clave
+	mariposaAltar.pasosEntreAleteos = 6;
+
+	// Cargar los cuadros clave de su archivo y empezar a volar
+	for (int i = 0; i < NUM_MARIPOSAS; i++)
+	{
+		if (mariposas[i]->CargarDesdeArchivo(RUTAS_MARIPOSA[i]))
+			mariposas[i]->ReproducirDesde(0);
+	}
 
 	// Papel picado
 	glm::mat4 modeloBardas = glm::mat4(1.0f);
@@ -1284,6 +1324,14 @@ int main()
 		// Papel picado del atrio y del panteón
 		papelPicado.dibujar(lightingShader, currentFrame);
 
+		// Mariposas: avanzar la interpolación de los keyframes y dibujarlas.
+		// Dibujar() pone su propia matriz "model" y deja transparency/culling como estaban.
+		for (int i = 0; i < NUM_MARIPOSAS; i++)
+		{
+			mariposas[i]->Actualizar(deltaTime);
+			mariposas[i]->Dibujar(lightingShader);
+		}
+
 
 		// Esqueleto
 		model = glm::mat4(1.0f);
@@ -1600,6 +1648,46 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	if (key == GLFW_KEY_O && action == GLFW_PRESS)
 	{
 		abrirPorton = !abrirPorton;
+	}
+
+	// Mariposas (una vez por pulsación)
+	if (action == GLFW_PRESS && mariposas[0] != nullptr)
+	{
+		MariposaKeyframes* m = mariposas[mariposaEditada];
+		switch (key)
+		{
+		case GLFW_KEY_1:   // editar la mariposa de la iglesia
+		case GLFW_KEY_2:   // editar la mariposa del altar
+			mariposaEditada = key - GLFW_KEY_1;
+			std::cout << "[Mariposa] Editando: " << RUTAS_MARIPOSA[mariposaEditada] << std::endl;
+			break;
+		case GLFW_KEY_M:   // volar / detener las dos
+		{
+			bool volando = mariposas[0]->EstaReproduciendo() || mariposas[1]->EstaReproduciendo();
+			for (int i = 0; i < NUM_MARIPOSAS; i++)
+			{
+				if (volando) { if (mariposas[i]->EstaReproduciendo()) mariposas[i]->ReproducirODetener(); }
+				else mariposas[i]->ReproducirDesde(0);
+			}
+			break;
+		}
+		case GLFW_KEY_X:   // borrar los cuadros de vuelo de la mariposa editada
+			m->BorrarCuadrosClave();
+			break;
+		case GLFW_KEY_K:   // grabar un cuadro clave 1 m frente a la cámara
+			m->GuardarCuadroDesdeCamara(camera.GetPosition(), camera.GetFront());
+			break;
+		case GLFW_KEY_P:   // guardar los cuadros clave en su archivo
+			m->GuardarEnArchivo(RUTAS_MARIPOSA[mariposaEditada]);
+			break;
+		case GLFW_KEY_L:   // volver a leer los dos archivos
+			for (int i = 0; i < NUM_MARIPOSAS; i++)
+				if (mariposas[i]->CargarDesdeArchivo(RUTAS_MARIPOSA[i])) mariposas[i]->ReproducirDesde(0);
+			break;
+		case GLFW_KEY_I:   // imprimir en consola los cuadros clave de la mariposa editada
+			m->ImprimirCuadrosClave();
+			break;
+		}
 	}
 }
 
