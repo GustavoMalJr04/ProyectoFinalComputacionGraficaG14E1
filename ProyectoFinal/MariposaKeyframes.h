@@ -7,7 +7,7 @@
 //  ¿QUÉ HACE ESTE ARCHIVO?
 //
 //  1) VUELO (cuadros clave de trayectoria)
-//     Cada cuadro clave guarda una "foto" de la mariposa:
+//     Cada cuadro clave guarda un frame de la mariposa:
 //        posición (X, Y, Z) + giro en Y + inclinación en X.
 //     Entre un cuadro clave y el siguiente se hace INTERPOLACIÓN LINEAL:
 //        incremento = (valorDestino - valorOrigen) / pasosEntreCuadros
@@ -15,22 +15,27 @@
 //     clave regresa al primero, así el vuelo se repite sin fin.
 //
 //  2) ALETEO (cuadros clave de las alas)
-//     Dos poses: "alas abajo" y "alas arriba". También se interpolan,
+//     De 2 a 8 poses (ángulo de las alas). También se interpolan,
 //     pero con muy pocos pasos, para que aletee rápido.
+//
+//  ARCHIVO DE CUADROS CLAVE (assets/models/mariposa/vuelo_*.txt)
+//     # comentario
+//     ala -20                    <- cuadro clave del aleteo
+//     ala 70
+//     -1.00 5.00 -27.00 180 0    <- cuadro clave del vuelo: x y z giroY inclinacionX
+//     
 //
 //  3) MODELADO JERÁRQUICO
 //     cuerpo (padre)  ->  ala izquierda y ala derecha (hijas)
 //     La matriz de cada ala = matriz del cuerpo × rotación de la bisagra,
 //     por eso las alas siguen al cuerpo a donde vaya.
-//
-//  REQUISITOS DE LOS .obj (Blender o los de respaldo):
-//     - Cabeza hacia -Z (el "frente" de OpenGL)
-//     - Ala derecha en x > 0, ala izquierda en x < 0
-//     - La bisagra de las alas sobre el eje Z (x = 0, y = 0)
 // =====================================================================
 
 #include <cstdio>
 #include <cmath>
+#include <fstream>
+#include <sstream>
+#include <string>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -43,7 +48,7 @@
 //  Constantes
 // ---------------------------------------------------------------------
 const int   MAX_CUADROS_CLAVE      = 40;     // máximo de cuadros clave del vuelo
-const int   NUM_POSES_ALA          = 2;      // abajo y arriba
+const int   MAX_POSES_ALA          = 8;      // máximo de cuadros clave del aleteo
 const float DISTANCIA_FRENTE_CAMARA = 1.0f;  // a cuántos metros de la cámara se guarda un cuadro
 
 // ---------------------------------------------------------------------
@@ -72,13 +77,15 @@ struct PoseAla
 class MariposaKeyframes
 {
 public:
-    // ------------------- Parámetros que puedes ajustar -------------------
+    // ------------------- Parámetros -------------------
     int   pasosEntreCuadros     = 120;    // pasos para ir de un cuadro clave al siguiente (120 = 2 s)
     int   pasosEntreAleteos     = 5;      // pasos entre "abajo" y "arriba" (5 → unos 6 aleteos por segundo)
     float pasosPorSegundo       = 60.0f;  // ritmo fijo de la animación (no depende de los FPS)
     float escala                = 0.10f;  // tamaño final del modelo
-    float correccionGiroGrados  = 0.0f;   // pon 180 si la mariposa vuela "de reversa"
-    float bisagraX              = 0.0f;   // si la bisagra del ala no quedó en x = 0
+	float correccionGiroGrados = 0.0f;   // para ajustar el sentido de la mariposa en el modelo 3D
+    float bisagraX              = 0.0f;   // colocar la bisagra en  x = 0
+    glm::vec3 desplazamiento    = glm::vec3(0.0f); // se suma a la trayectoria (para que varias
+                                                   // mariposas compartan el mismo archivo sin encimarse)
 
     // ------------------- Constructor -------------------
     // Recibe los tres modelos ya cargados (se pueden compartir entre varias mariposas)
@@ -92,8 +99,24 @@ public:
     // Ángulos (en grados) de las dos poses de las alas
     void ConfigurarAleteo(float anguloAbajo, float anguloArriba)
     {
-        posesAla[0].anguloGrados = anguloAbajo;
-        posesAla[1].anguloGrados = anguloArriba;
+        totalPosesAla = 0;
+        AgregarPoseAla(anguloAbajo);
+        AgregarPoseAla(anguloArriba);
+        ReiniciarAleteo();
+    }
+
+    // Agrega un cuadro clave del aleteo (ángulo de las alas en grados)
+    void AgregarPoseAla(float anguloGrados)
+    {
+        if (totalPosesAla >= MAX_POSES_ALA) return;
+        posesAla[totalPosesAla].anguloGrados = anguloGrados;
+        totalPosesAla++;
+    }
+
+    // Empieza el aleteo desde la primera pose
+    void ReiniciarAleteo()
+    {
+        if (totalPosesAla < 2) ConfigurarAleteoPorDefecto();
         poseAlaActual     = 0;
         pasoAlaActual     = 0;
         anguloAlaActual   = posesAla[0].anguloGrados;
@@ -101,7 +124,7 @@ public:
     }
 
     // ------------------- Cuadros clave -------------------
-    // Agrega un cuadro clave escrito a mano en main.cpp
+    // Agrega un cuadro clave escrito en main.cpp
     void AgregarCuadroClave(float x, float y, float z, float giroY, float inclinacionX)
     {
         if (totalCuadrosClave >= MAX_CUADROS_CLAVE)
@@ -152,6 +175,90 @@ public:
 
     int  TotalCuadrosClave() const { return totalCuadrosClave; }
     bool EstaReproduciendo() const { return reproduciendo; }
+
+    // ------------------- Archivo de cuadros clave -------------------
+    // Formato: una línea por cuadro clave ->  x  y  z  giroY  inclinacionX
+    // Las líneas que empiezan con '#' son comentarios.
+
+    // Guarda los cuadros clave actuales en un archivo de texto
+    bool GuardarEnArchivo(const char* ruta) const
+    {
+        std::ofstream archivo(ruta);
+        if (!archivo.is_open())
+        {
+            printf("[Mariposa] No se pudo crear el archivo %s\n", ruta);
+            return false;
+        }
+        archivo << "# Cuadros clave de la mariposa monarca\n";
+        archivo << "# ala <angulo>  -> cuadro clave del aleteo (grados, + = arriba)\n";
+        for (int i = 0; i < totalPosesAla; i++)
+            archivo << "ala " << posesAla[i].anguloGrados << "\n";
+        archivo << "# x  y  z  giroY(grados)  inclinacionX(grados)  -> cuadro clave del vuelo\n";
+        for (int i = 0; i < totalCuadrosClave; i++)
+        {
+            const CuadroClave& c = cuadrosClave[i];
+            archivo << c.posicionX << " " << c.posicionY << " " << c.posicionZ << " "
+                    << c.giroY << " " << c.inclinacionX << "\n";
+        }
+        printf("[Mariposa] %d cuadros clave guardados en %s\n", totalCuadrosClave, ruta);
+        return true;
+    }
+
+    // Borra los cuadros actuales y carga los del archivo. Si estaba volando, sigue volando.
+    bool CargarDesdeArchivo(const char* ruta)
+    {
+        std::ifstream archivo(ruta);
+        if (!archivo.is_open())
+        {
+            printf("[Mariposa] No se encontro el archivo %s\n", ruta);
+            return false;
+        }
+        bool seguiaVolando = reproduciendo;
+        totalCuadrosClave = 0;
+        reproduciendo = false;
+        int posesLeidas = 0;
+
+        std::string linea;
+        while (std::getline(archivo, linea))
+        {
+            if (linea.empty() || linea[0] == '#' || linea[0] == '\r') continue;
+            std::istringstream datos(linea);
+
+            if (linea.compare(0, 3, "ala") == 0)          // cuadro clave del aleteo
+            {
+                std::string etiqueta;
+                float angulo;
+                if (datos >> etiqueta >> angulo)
+                {
+                    if (posesLeidas == 0) totalPosesAla = 0;   // el archivo reemplaza las poses por defecto
+                    AgregarPoseAla(angulo);
+                    posesLeidas++;
+                }
+                continue;
+            }
+
+            float x, y, z, giro, inclinacion;               // cuadro clave del vuelo
+            if (datos >> x >> y >> z >> giro >> inclinacion)
+                AgregarCuadroClave(x, y, z, giro, inclinacion);
+        }
+        ReiniciarAleteo();
+        printf("[Mariposa] %s: %d cuadros de vuelo, %d de aleteo\n", ruta, totalCuadrosClave, totalPosesAla);
+
+        if (seguiaVolando && totalCuadrosClave >= 2) ReproducirDesde(0);
+        return totalCuadrosClave >= 2;
+    }
+
+    // Arranca el vuelo desde un cuadro clave cualquiera (sirve para que
+    // varias mariposas con la misma ruta vayan repartidas y no juntas)
+    void ReproducirDesde(int cuadroInicial)
+    {
+        if (totalCuadrosClave < 2) return;
+        cuadroActual = cuadroInicial % totalCuadrosClave;
+        pasoActual   = 0;
+        acumuladorTiempo = 0.0f;
+        CalcularIncrementos();
+        reproduciendo = true;
+    }
 
     // ------------------- Reproducción -------------------
     // Inicia la animación desde el primer cuadro clave, o la detiene si ya estaba corriendo
@@ -212,7 +319,7 @@ public:
         // ---------- CUERPO (padre) ----------
         // Orden de lectura: primero escala, luego inclina, luego gira, al final traslada.
         glm::mat4 matrizCuerpo(1.0f);
-        matrizCuerpo = glm::translate(matrizCuerpo, glm::vec3(posicionX, posicionY, posicionZ));
+        matrizCuerpo = glm::translate(matrizCuerpo, glm::vec3(posicionX, posicionY, posicionZ) + desplazamiento);
         matrizCuerpo = glm::rotate(matrizCuerpo, glm::radians(giroY + correccionGiroGrados), glm::vec3(0.0f, 1.0f, 0.0f));
         matrizCuerpo = glm::rotate(matrizCuerpo, glm::radians(inclinacionX), glm::vec3(1.0f, 0.0f, 0.0f));
         matrizCuerpo = glm::scale(matrizCuerpo, glm::vec3(escala));
@@ -269,7 +376,8 @@ private:
     float incrementoGiroY = 0.0f, incrementoInclinacionX = 0.0f;
 
     // ------------------- Cuadros clave de las alas -------------------
-    PoseAla posesAla[NUM_POSES_ALA];
+    PoseAla posesAla[MAX_POSES_ALA];
+    int   totalPosesAla     = 0;
     int   poseAlaActual     = 0;
     int   pasoAlaActual     = 0;
     float anguloAlaActual   = 0.0f;
@@ -312,9 +420,16 @@ private:
         incrementoInclinacionX = (destino.inclinacionX - inclinacionX) / pasosEntreCuadros;
     }
 
+    void ConfigurarAleteoPorDefecto()
+    {
+        totalPosesAla = 0;
+        AgregarPoseAla(-15.0f);
+        AgregarPoseAla(75.0f);
+    }
+
     void CalcularIncrementoAla()
     {
-        int siguientePose = (poseAlaActual + 1) % NUM_POSES_ALA;
+        int siguientePose = (poseAlaActual + 1) % totalPosesAla;
         incrementoAla = (posesAla[siguientePose].anguloGrados - posesAla[poseAlaActual].anguloGrados)
                         / pasosEntreAleteos;
     }
@@ -343,7 +458,7 @@ private:
         // ---------- Aleteo ----------
         if (pasoAlaActual >= pasosEntreAleteos)
         {
-            poseAlaActual   = (poseAlaActual + 1) % NUM_POSES_ALA;
+            poseAlaActual   = (poseAlaActual + 1) % totalPosesAla;
             anguloAlaActual = posesAla[poseAlaActual].anguloGrados;
             pasoAlaActual   = 0;
             CalcularIncrementoAla();
