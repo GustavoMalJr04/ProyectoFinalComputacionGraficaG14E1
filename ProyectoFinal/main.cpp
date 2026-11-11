@@ -1212,11 +1212,14 @@ int main()
 		portonMarco.Draw(lightingShader);
 		// Estos modelos están en el origen y quedarían en medio del atrio;
 		// para usarlos hay que darles su posición con glm::translate.
-		// cruzPanteon.Draw(lightingShader);
-		// cruzMadera1.Draw(lightingShader);
-		// cruzMadera2.Draw(lightingShader);
-		// lapida1.Draw(lightingShader);
-		// farol1.Draw(lightingShader);
+		//cruzPanteon.Draw(lightingShader);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-20.0f, 3.0f, -0.25f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		cruzMadera1.Draw(lightingShader);
+		//cruzMadera2.Draw(lightingShader);
+		//lapida1.Draw(lightingShader);
+		//farol1.Draw(lightingShader);
 
 		// Lápidas y cruces
 		for (int i = 0; i < 4; i++)
