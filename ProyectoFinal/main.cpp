@@ -1084,7 +1084,9 @@ int main()
 		DoMovement();
 		Animation();
 
-		camera.SetPosition(skeletonPos + glm::vec3(0.0f, 2.0f, -0.25f));
+		float distanceFromSkeleton = 2.5f;
+		glm::vec3 camPos = skeletonPos - (camera.GetFront() * distanceFromSkeleton) + glm::vec3(0.0f, 1.8f, 0.0f);
+		camera.SetPosition(camPos);
 
 		glClearColor(NIEBLA_COLOR.x, NIEBLA_COLOR.y, NIEBLA_COLOR.z, 1.0f);   // color de fondo de noche
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
