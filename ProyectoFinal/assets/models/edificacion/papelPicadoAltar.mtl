@@ -14,7 +14,7 @@ newmtl Material__26
 	Ni 1.5200
 	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd ../../../imagenes/papelPicadoAzul.png
+	map_Kd ../../../Imagenes/papelPicadoAzul.png
 
 newmtl Material__27
 	Kd 0.2739 0.0890 0.6050
@@ -29,7 +29,7 @@ newmtl Material__27
 	Ni 1.5200
 	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd ../../../imagenes/pp_morado.png
+	map_Kd ../../../Imagenes/pp_morado.png
 
 newmtl Material__28
 	Kd 0.5968 0.2002 0.0615
@@ -44,7 +44,7 @@ newmtl Material__28
 	Ni 1.5200
 	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd ../../../imagenes/pp_rosa.png
+	map_Kd ../../../Imagenes/pp_rosa.png
 
 newmtl Material__29
 	Kd 0.2262 0.3635 0.8521
@@ -59,7 +59,7 @@ newmtl Material__29
 	Ni 1.5200
 	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd ../../../imagenes/pp_morado.png
+	map_Kd ../../../Imagenes/pp_morado.png
 
 newmtl Material__30
 	Kd 0.4721 0.1123 0.6689
@@ -74,4 +74,4 @@ newmtl Material__30
 	Ni 1.5200
 	Ke 0.0000 0.0000 0.0000
 	illum 2
-	map_Kd ../../../imagenes/pp_morado.png
+	map_Kd ../../../Imagenes/pp_morado.png

@@ -7,18 +7,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProyectoFinal", "ProyectoFi
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{21C81973-6108-4461-84F5-B5969024A6D3}.Debug|x64.ActiveCfg = Debug|x64
-		{21C81973-6108-4461-84F5-B5969024A6D3}.Debug|x64.Build.0 = Debug|x64
 		{21C81973-6108-4461-84F5-B5969024A6D3}.Debug|x86.ActiveCfg = Debug|Win32
 		{21C81973-6108-4461-84F5-B5969024A6D3}.Debug|x86.Build.0 = Debug|Win32
-		{21C81973-6108-4461-84F5-B5969024A6D3}.Release|x64.ActiveCfg = Release|x64
-		{21C81973-6108-4461-84F5-B5969024A6D3}.Release|x64.Build.0 = Release|x64
 		{21C81973-6108-4461-84F5-B5969024A6D3}.Release|x86.ActiveCfg = Release|Win32
 		{21C81973-6108-4461-84F5-B5969024A6D3}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection

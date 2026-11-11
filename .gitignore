@@ -436,3 +436,4 @@ FodyWeavers.xsd
 # Pero excluir los archivos pesados de depuración e incrementales dentro de External Libraries
 External\ Libraries/**/*.ilk
 External\ Libraries/**/*.pdb
+.vscode/

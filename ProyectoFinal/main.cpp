@@ -307,14 +307,14 @@ int main()
 	// Shaders
 	Shader lightingShader("Shader/lighting.vs", "Shader/lighting.frag");
 	Shader lampShader("Shader/lamp.vs", "Shader/lamp.frag");
-	Shader SkyBoxshader("Shader/SkyBox.vs", "Shader/SkyBox.frag");
+	Shader SkyBoxshader("Shader/skybox.vs", "Shader/skybox.frag");
 	Shader humoShader("Shader/humo.vs", "Shader/humo.frag");
 
 	// Carga de modelos: esqueleto
 	Model skeleton((char*)"assets/models/skeleton/skeleton.obj");
 	Model craneo((char*)"assets/models/skeleton/craneo.obj");
-	Model antebrazoDer((char*)"assets/models/skeleton/antebrazoDer.obj");
-	Model antebrazoIzq((char*)"assets/models/skeleton/antebrazoIzq.obj");
+	Model antebrazoDer((char*)"assets/models/skeleton/anteBrazoDer.obj");
+	Model antebrazoIzq((char*)"assets/models/skeleton/anteBrazoIzq.obj");
 	Model brazoDer((char*)"assets/models/skeleton/brazoDer.obj");
 	Model brazoIzq((char*)"assets/models/skeleton/brazoIzq.obj");
 	Model femurDer((char*)"assets/models/skeleton/femurDer.obj");
