@@ -35,6 +35,7 @@
 #include "PapelPicado.h"   // tiras de papel picado
 #include "Texture.h"   // carga del skybox
 #include "MariposaKeyframes.h"   // mariposas monarca animadas por keyframes
+#include "FichasCulturales.h"    // fichas de información cultural (E abre / siguiente, Q cierra)
 
 // Prototipos de funciones
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -51,13 +52,16 @@ Camera  camera(glm::vec3(0.0f, 0.0f, 3.0f));
 GLfloat lastX = WIDTH / 2.0;
 GLfloat lastY = HEIGHT / 2.0;
 bool keys[1024];
+
+// Fichas culturales (global porque las usa KeyCallback)
+FichasCulturales fichas;
 bool firstMouse = true;
 
 // Luz de prueba
 glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 bool active;
 
-// Luz de colores activacion por medio de tecla espacio
+// Luz de colores que se prende con Espacio
 glm::vec3 pointLightPositions[] = {
 	glm::vec3(-20.0f, 3.2f, 4.5f),   // frente a la ofrenda
 	glm::vec3(0.0f,0.0f, 0.0f),
@@ -827,19 +831,15 @@ struct BoundingBox {
 };
 
 std::vector<BoundingBox> invisibleWalls = {
-	{  -120.0f, 120.0f, 80.0f, 85.0f },		//Muro limite invisible norte
-	{  -120.0f, 120.0f, -55.0f, -49.8f },	//Muro limite invisible sur
-	{  -65.0f, -60.0f, -80.0f, 80.0f },		//Muro limite invisible este
-	{  60.0f, 65.0f, -80.0f, 80.0f },		//Muro limite invisible oeste
-	{	-50.0f, -49.75f, -60.0f, 50.0f },	//Muro este
-	{	49.75f, 50.0f, -60.0f, 50.0f },		//Muro oeste
-	{  10.0f, 15.0f,  5.0f,  40.0f },		//Muro interior 1
-	{  10.0f, 15.0f, -60.0f,  -4.75f },		//Muro interior 2
-	{  -60.0f, -22.9f, 49.90f,  50.00f },	//Muro norte 1
-	{  -17.0f, 30.35f, 49.90f,  50.00f },	//Muro norte 2
-	{  34.4f, 60.0f, 49.90f,  50.00f },		//Muro norte 3
-	{ -33.0f, -6.0f, -45.0f,  -14.0f },		//Iglesia
-	{ -23.3f, -16.7f, -1.25f,  3.1f }		// ofrenda
+	{  -120.0f, 120.0f, 80.0f, 85.0f },
+	{  -120.0f, 120.0f, -55.0f, -49.8f },
+	{	-50.0f, -49.75f, -60.0f, 50.0f },
+	{	49.75f, 50.0f, -60.0f, 50.0f },
+	{  -65.0f, -60.0f, -80.0f, 80.0f },
+	{  60.0f, 65.0f, -80.0f, 80.0f },
+	{  10.0f, 15.0f,  5.0f,  40.0f },
+	{  10.0f, 15.0f, -60.0f,  -4.75f },
+	{ -23.3f, -16.7f, -1.25f,  3.1f }   // ofrenda
 };
 
 // Revisa si el esqueleto choca con alguna pared invisible
@@ -997,6 +997,15 @@ int main()
 	// Sendero de cempasúchil, flores y velas
 	construirSendero();
 
+	// Fichas culturales: un punto de interés por zona; con E se recorren sus fichas en orden
+	fichas.cargar("Imagenes");
+	fichas.agregarPunto("Ofrenda", glm::vec3(posAltar.x, 0.0f, altarZ1 + 3.0f), 3.5f, {
+		"FIcha_Niveles.png", "FIcha_Retrato.png", "Ficha_Flor.png", "FIcha_Veladoras.png",
+		"FIcha_Copal.png", "FIcha_Agua.png", "FIcha_Sal.png", "FIcha_Pan.png",
+		"FIcha_Calavera.png", "FIcha_Mariposa.png" });
+	fichas.agregarPunto("Papel picado", glm::vec3(xPasillo, alturaPiso(xPasillo, 30.0f), 30.0f), 3.0f, { "FIcha_Papel.png" });
+	fichas.agregarPunto("Xoloitzcuintle", glm::vec3(xPasillo, alturaPiso(xPasillo, 45.0f), 45.0f), 3.0f, { "FIcha_Xolo.png" });
+
 	// Los postes de los faroles también chocan
 	for (const Farol& f : faroles)
 		invisibleWalls.push_back({ f.pos.x - 0.25f, f.pos.x + 0.25f, f.pos.z - 0.25f, f.pos.z + 0.25f });
@@ -1087,6 +1096,7 @@ int main()
 		glfwPollEvents();
 		DoMovement();
 		Animation();
+		fichas.actualizar(skeletonPos, deltaTime);
 
 		float distanceFromSkeleton = 2.5f;
 		glm::vec3 camPos = skeletonPos - (camera.GetFront() * distanceFromSkeleton) + glm::vec3(0.0f, 1.8f, 0.0f);
@@ -1512,6 +1522,10 @@ int main()
 		glUniform1i(emisivoLoc, 0);
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 
+		// Fichas culturales: tarjetas flotantes en el mundo y, al final, la ficha en pantalla
+		fichas.dibujarMarcadores(view, projection, camera.GetPosition(), currentFrame);
+		fichas.dibujarHUD(SCREEN_WIDTH, SCREEN_HEIGHT, currentFrame);
+
 		glfwSwapBuffers(window);
 	}
 
@@ -1531,6 +1545,9 @@ int main()
 // Movimiento del esqueleto y la cámara
 void DoMovement()
 {
+	// Con una ficha abierta el esqueleto se queda quieto
+	if (fichas.abierta()) { isWalking = false; return; }
+
 	GLfloat cameraSpeed = 5.0f * deltaTime;
 
 	glm::vec3 front = camera.GetFront();
@@ -1649,6 +1666,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	if (key == GLFW_KEY_F && action == GLFW_PRESS)
 	{
 		linterna = !linterna;
+	}
+
+	// Fichas culturales: E abre / pasa a la siguiente, Q cierra
+	if (action == GLFW_PRESS && (key == GLFW_KEY_E || key == GLFW_KEY_Q))
+	{
+		fichas.tecla(key);
 	}
 
 	if (key == GLFW_KEY_O && action == GLFW_PRESS)
