@@ -56,7 +56,7 @@ bool firstMouse = true;
 glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 bool active;
 
-// Luz de colores que se prende con Espacio
+// Luz de colores activacion por medio de tecla espacio
 glm::vec3 pointLightPositions[] = {
 	glm::vec3(-20.0f, 3.2f, 4.5f),   // frente a la ofrenda
 	glm::vec3(0.0f,0.0f, 0.0f),
@@ -814,15 +814,19 @@ struct BoundingBox {
 };
 
 std::vector<BoundingBox> invisibleWalls = {
-	{  -120.0f, 120.0f, 80.0f, 85.0f },
-	{  -120.0f, 120.0f, -55.0f, -49.8f },
-	{	-50.0f, -49.75f, -60.0f, 50.0f },
-	{	49.75f, 50.0f, -60.0f, 50.0f },
-	{  -65.0f, -60.0f, -80.0f, 80.0f },
-	{  60.0f, 65.0f, -80.0f, 80.0f },
-	{  10.0f, 15.0f,  5.0f,  40.0f },
-	{  10.0f, 15.0f, -60.0f,  -4.75f },
-	{ -23.3f, -16.7f, -1.25f,  3.1f }   // ofrenda
+	{  -120.0f, 120.0f, 80.0f, 85.0f },		//Muro limite invisible norte
+	{  -120.0f, 120.0f, -55.0f, -49.8f },	//Muro limite invisible sur
+	{  -65.0f, -60.0f, -80.0f, 80.0f },		//Muro limite invisible este
+	{  60.0f, 65.0f, -80.0f, 80.0f },		//Muro limite invisible oeste
+	{	-50.0f, -49.75f, -60.0f, 50.0f },	//Muro este
+	{	49.75f, 50.0f, -60.0f, 50.0f },		//Muro oeste
+	{  10.0f, 15.0f,  5.0f,  40.0f },		//Muro interior 1
+	{  10.0f, 15.0f, -60.0f,  -4.75f },		//Muro interior 2
+	{  -60.0f, -22.9f, 49.90f,  50.00f },	//Muro norte 1
+	{  -17.0f, 30.35f, 49.90f,  50.00f },	//Muro norte 2
+	{  34.4f, 60.0f, 49.90f,  50.00f },		//Muro norte 3
+	{ -33.0f, -6.0f, -45.0f,  -14.0f },		//Iglesia
+	{ -23.3f, -16.7f, -1.25f,  3.1f }		// ofrenda
 };
 
 // Revisa si el esqueleto choca con alguna pared invisible

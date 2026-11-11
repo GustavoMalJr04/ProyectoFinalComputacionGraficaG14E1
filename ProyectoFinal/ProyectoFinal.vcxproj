@@ -25,6 +25,22 @@
     <ClInclude Include="MariposaKeyframes.h" />
     <ClInclude Include="PapelPicado.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="Shader\background.frag.txt" />
+    <Text Include="Shader\background.vs.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shader\core.frag" />
+    <None Include="Shader\core.vs" />
+    <None Include="Shader\lamp.frag" />
+    <None Include="Shader\lamp.vs" />
+    <None Include="Shader\lighting.frag" />
+    <None Include="Shader\lighting.vs" />
+    <None Include="Shader\modelLoading.frag" />
+    <None Include="Shader\modelLoading.vs" />
+    <None Include="Shader\skybox.frag" />
+    <None Include="Shader\skybox.vs" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
