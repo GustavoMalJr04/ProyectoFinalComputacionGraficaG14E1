@@ -1,20 +1,6 @@
 #pragma once
-// =====================================================================
-//  FichasCulturales.h  (Equipo 1 - Día de Muertos)
-//
-//  Elemento interactivo con información cultural. Muestra las fichas
-//  Imagenes/Ficha_*.png de dos formas:s
-//
-//   1) Marcador 3D: sobre cada "punto de interés" flota una tarjetita con la
-//      primera ficha del punto. Siempre mira a la cámara, sube y baja, y
-//      brilla cuando el esqueleto se acerca.
-//   2) Ficha en pantalla (HUD): cerca de un punto aparece una miniatura en la
-//      esquina; con E se abre la ficha completa sobre la escena (fondo
-//      oscurecido, aparece con un pequeño zoom). E pasa a la siguiente ficha
-//      del mismo punto, Q la cierra. Mientras está abierta el esqueleto no camina.
-//
-//  No necesitamos archivos de shader: compila su propio shader al cargar.
 
+// Librerías
 #include <vector>
 #include <string>
 #include <cmath>
@@ -27,25 +13,25 @@
 
 #include "SOIL2/SOIL2.h"
 
+// Fichas culturales
 class FichasCulturales
 {
 public:
-	// ---------------- Ajustes ----------------
-	float ALTURA_MARCADOR = 2.4f;    // metros sobre el piso del punto
-	float TAM_MARCADOR = 0.7f;       // alto de la tarjeta flotante (m)
-	float ALTO_FICHA = 1.75f;        // alto de la ficha abierta en NDC (2.0 = pantalla completa)
-	float TAM_MINIATURA = 0.45f;     // alto de la miniatura de la esquina en NDC
-	float OSCURECER = 0.65f;         // opacidad del fondo negro con la ficha abierta
-	float DURACION_APARICION = 0.25f;// segundos del zoom al abrir
 
-	// ---------------- Carga ----------------
+	// Ajustes
+	float ALTURA_MARCADOR = 2.4f;
+	float TAM_MARCADOR = 0.7f;
+	float ALTO_FICHA = 1.75f;
+	float OSCURECER = 0.65f;
+
+	// Cargar
 	bool cargar(const std::string& carpeta = "Imagenes")
 	{
 		this->carpeta = carpeta;
 		compilarShader();
 		crearQuad();
 
-		// textura blanca 1x1 para el fondo oscurecido
+		// Textura blanca
 		unsigned char blanco[4] = { 255, 255, 255, 255 };
 		glGenTextures(1, &texBlanca);
 		glBindTexture(GL_TEXTURE_2D, texBlanca);
@@ -56,7 +42,7 @@ public:
 		return programa != 0;
 	}
 
-	// Un punto de interés con una o varias fichas (se recorren con E).
+	// Agregar punto de interés
 	void agregarPunto(const std::string& nombre, glm::vec3 pos, float radio,
 		const std::vector<std::string>& archivos)
 	{
@@ -77,10 +63,9 @@ public:
 		puntos.push_back(p);
 	}
 
-	// ---------------- Lógica ----------------
+	// Actualizar
 	void actualizar(glm::vec3 posJugador, float dt)
 	{
-		// punto más cercano dentro de su radio (distancia en el plano XZ)
 		int antes = cercano;
 		cercano = -1;
 		float mejor = 1e9f;
@@ -91,40 +76,39 @@ public:
 			if (dist < puntos[i].radio && dist < mejor) { mejor = dist; cercano = i; }
 		}
 		if (cercano != antes && cercano >= 0)
-			std::cout << "[Fichas] " << puntos[cercano].nombre << ": presiona E para ver la ficha" << std::endl;
+			std::cout << "[Fichas] " << puntos[cercano].nombre << ": presiona Q para ver la ficha" << std::endl;
 
-		// si se aleja, se cierra sola
+		// Cerrar si se aleja
 		if (abiertoEn >= 0 && cercano != abiertoEn) cerrar();
-
-		if (abiertoEn >= 0) aparicion = glm::min(1.0f, aparicion + dt / DURACION_APARICION);
 	}
 
-	// Llamar desde KeyCallback cuando action == GLFW_PRESS
+	// Teclas
 	void tecla(int key)
 	{
-		if (key == GLFW_KEY_E)
+		// Q abre o pasa a la siguiente
+		if (key == GLFW_KEY_Q)
 		{
 			if (abiertoEn < 0)
 			{
-				if (cercano >= 0) { abiertoEn = cercano; pagina = 0; aparicion = 0.0f; }
+				if (cercano >= 0) { abiertoEn = cercano; pagina = 0; }
 			}
 			else
 			{
 				pagina++;
-				aparicion = 0.0f;
 				if (pagina >= (int)puntos[abiertoEn].fichas.size()) cerrar();
 			}
 		}
-		else if (key == GLFW_KEY_Q)
+		// E cierra
+		else if (key == GLFW_KEY_E)
 		{
 			cerrar();
 		}
 	}
 
+	// Ficha abierta
 	bool abierta() const { return abiertoEn >= 0; }
 
-	// ---------------- Dibujo ----------------
-	// Tarjetas flotantes en el mundo. Llamar después de dibujar la escena opaca.
+	// Dibujar marcadores
 	void dibujarMarcadores(const glm::mat4& view, const glm::mat4& projection,
 		glm::vec3 posCam, float tiempo)
 	{
@@ -139,14 +123,13 @@ public:
 			bool cerca = (i == cercano);
 
 			glm::vec3 centro = p.pos + glm::vec3(0.0f, ALTURA_MARCADOR + 0.12f * sinf(tiempo * 2.0f + i), 0.0f);
-			// billboard cilíndrico: solo gira en Y para quedar de frente a la cámara
 			float yaw = atan2f(posCam.x - centro.x, posCam.z - centro.z);
-			float escala = TAM_MARCADOR * (cerca ? 1.0f + 0.08f * sinf(tiempo * 6.0f) : 1.0f);
+			float escala = TAM_MARCADOR;
 
 			glm::mat4 m(1.0f);
 			m = glm::translate(m, centro);
 			m = glm::rotate(m, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
-			m = glm::scale(m, glm::vec3(escala / f.aspecto, escala, 1.0f));   // ancho = alto * (w/h)
+			m = glm::scale(m, glm::vec3(escala / f.aspecto, escala, 1.0f));
 
 			glm::vec3 tinte = cerca ? glm::vec3(1.25f, 1.1f, 0.8f) : glm::vec3(0.85f);
 			dibujarQuad(projection * view * m, f.tex, tinte, 1.0f);
@@ -154,48 +137,33 @@ public:
 		terminar();
 	}
 
-	// Miniatura o ficha completa sobre la pantalla. Llamar al final del frame.
+	// Dibujar ficha en pantalla
 	void dibujarHUD(int ancho, int alto, float tiempo)
 	{
-		if (cercano < 0 && abiertoEn < 0) return;
+		if (abiertoEn < 0 || alto <= 0) return;
 		empezar();
 		glDisable(GL_DEPTH_TEST);
 		float pantalla = (float)ancho / (float)alto;
+		const Ficha& f = puntos[abiertoEn].fichas[pagina];
 
-		if (abiertoEn >= 0)
-		{
-			const Ficha& f = puntos[abiertoEn].fichas[pagina];
+		// Fondo oscuro
+		dibujarQuad(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)), texBlanca, glm::vec3(0.0f), OSCURECER);
 
-			// fondo oscurecido
-			dibujarQuad(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)), texBlanca,
-				glm::vec3(0.0f), OSCURECER * aparicion);
-
-			// ficha centrada respetando la proporción de la imagen
-			float h = ALTO_FICHA;
-			float w = h / f.aspecto / pantalla;
-			if (w > 1.9f) { h *= 1.9f / w; w = 1.9f; }
-			float s = 0.85f + 0.15f * suave(aparicion);   // zoom de entrada
-			glm::mat4 m = glm::scale(glm::mat4(1.0f), glm::vec3(w * s, h * s, 1.0f));
-			dibujarQuad(m, f.tex, glm::vec3(1.0f), aparicion);
-		}
-		else
-		{
-			// miniatura en la esquina inferior derecha, parpadeando suave
-			const Ficha& f = puntos[cercano].fichas[0];
-			float h = TAM_MINIATURA;
-			float w = h / f.aspecto / pantalla;
-			glm::mat4 m(1.0f);
-			m = glm::translate(m, glm::vec3(1.0f - w * 0.5f - 0.04f, -1.0f + h * 0.5f + 0.04f, 0.0f));
-			m = glm::scale(m, glm::vec3(w, h, 1.0f));
-			dibujarQuad(m, f.tex, glm::vec3(1.0f), 0.7f + 0.3f * sinf(tiempo * 4.0f));
-		}
+		// Ficha centrada
+		float h = ALTO_FICHA;
+		float w = h / f.aspecto / pantalla;
+		if (w > 1.9f) { h *= 1.9f / w; w = 1.9f; }
+		glm::mat4 m = glm::scale(glm::mat4(1.0f), glm::vec3(w, h, 1.0f));
+		dibujarQuad(m, f.tex, glm::vec3(1.0f), 1.0f);
 
 		glEnable(GL_DEPTH_TEST);
 		terminar();
 	}
 
 private:
-	struct Ficha { GLuint tex = 0; float aspecto = 1.0f; };   // aspecto = alto / ancho de la imagen
+
+	// Estructuras
+	struct Ficha { GLuint tex = 0; float aspecto = 1.0f; };
 	struct Punto
 	{
 		std::string nombre;
@@ -204,23 +172,24 @@ private:
 		std::vector<Ficha> fichas;
 	};
 
+	// Estado
 	std::string carpeta;
 	std::vector<Punto> puntos;
-	int cercano = -1;      // punto en cuyo radio está el jugador
-	int abiertoEn = -1;    // punto cuya ficha está abierta
+	int cercano = -1;
+	int abiertoEn = -1;
 	int pagina = 0;
-	float aparicion = 0.0f;
 
+	// OpenGL
 	GLuint programa = 0, vao = 0, vbo = 0, texBlanca = 0;
 	GLint locMvp = -1, locTinte = -1, locAlfa = -1, locTex = -1;
 	GLint programaAnterior = 0;
 	GLboolean habiaCulling = GL_FALSE;
 
-	void cerrar() { abiertoEn = -1; pagina = 0; aparicion = 0.0f; }
+	// Cerrar
+	void cerrar() { abiertoEn = -1; pagina = 0; }
 
-	static float suave(float t) { return t * t * (3.0f - 2.0f * t); }
 
-	// aspecto guardado como alto / ancho: el ancho del quad es alto / aspecto
+	// Cargar textura
 	bool cargarTextura(const std::string& ruta, Ficha& f)
 	{
 		int w, h;
@@ -244,11 +213,10 @@ private:
 		return true;
 	}
 
+	// Crear quad
 	void crearQuad()
 	{
-		// quad de -0.5 a 0.5; la fila 0 de la imagen (arriba) va con v = 0
 		float v[] = {
-			// x      y     u     v
 			-0.5f, -0.5f, 0.0f, 1.0f,
 			 0.5f, -0.5f, 1.0f, 1.0f,
 			 0.5f,  0.5f, 1.0f, 0.0f,
@@ -268,6 +236,7 @@ private:
 		glBindVertexArray(0);
 	}
 
+	// Compilar etapa del shader
 	GLuint compilarEtapa(GLenum tipo, const char* src)
 	{
 		GLuint s = glCreateShader(tipo);
@@ -284,6 +253,7 @@ private:
 		return s;
 	}
 
+	// Compilar shader
 	void compilarShader()
 	{
 		const char* vs =
@@ -319,6 +289,7 @@ private:
 		locTex = glGetUniformLocation(programa, "tex");
 	}
 
+	// Empezar dibujo
 	void empezar()
 	{
 		glGetIntegerv(GL_CURRENT_PROGRAM, &programaAnterior);
@@ -328,10 +299,11 @@ private:
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		habiaCulling = glIsEnabled(GL_CULL_FACE);
-		glDisable(GL_CULL_FACE);   // la tarjeta se ve por los dos lados
+		glDisable(GL_CULL_FACE);
 		glBindVertexArray(vao);
 	}
 
+	// Terminar dibujo
 	void terminar()
 	{
 		glBindVertexArray(0);
@@ -340,6 +312,7 @@ private:
 		glUseProgram(programaAnterior);
 	}
 
+	// Dibujar quad
 	void dibujarQuad(const glm::mat4& mvp, GLuint tex, glm::vec3 tinte, float alfa)
 	{
 		glUniformMatrix4fv(locMvp, 1, GL_FALSE, glm::value_ptr(mvp));

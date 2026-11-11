@@ -1,5 +1,6 @@
 #pragma once
 
+// Librerías
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -13,22 +14,19 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-
-
 #include "Shader.h"
 
 using namespace std;
 
+// Estructura vértice
 struct Vertex
 {
-	// Position
 	glm::vec3 Position;
-	// Normal
 	glm::vec3 Normal;
-	// TexCoords
 	glm::vec2 TexCoords;
 };
 
+// Estructura textura
 struct Texture
 {
 	GLuint id;
@@ -36,15 +34,16 @@ struct Texture
 	aiString path;
 };
 
+// Malla
 class Mesh
 {
 public:
-	/*  Mesh Data  */
+
+	// Datos
 	vector<Vertex> vertices;
 	vector<GLuint> indices;
 	vector<Texture> textures;
 
-	/*  Functions  */
 	// Constructor
 	Mesh(vector<Vertex> vertices, vector<GLuint> indices, vector<Texture> textures)
 	{
@@ -52,50 +51,46 @@ public:
 		this->indices = indices;
 		this->textures = textures;
 
-		// Now that we have all the required data, set the vertex buffers and its attribute pointers.
 		this->setupMesh();
 	}
 
-	// Render the mesh
+	// Dibujar
 	void Draw(Shader shader)
 	{
-		// Bind appropriate textures
 		GLuint diffuseNr = 1;
 		GLuint specularNr = 1;
 
+		// Texturas
 		for (GLuint i = 0; i < this->textures.size(); i++)
 		{
-			glActiveTexture(GL_TEXTURE0 + i); // Active proper texture unit before binding
-											  // Retrieve texture number (the N in diffuse_textureN)
+			glActiveTexture(GL_TEXTURE0 + i);
 			stringstream ss;
 			string number;
 			string name = this->textures[i].type;
 
 			if (name == "texture_diffuse")
 			{
-				ss << diffuseNr++; // Transfer GLuint to stream
+				ss << diffuseNr++;
 			}
 			else if (name == "texture_specular")
 			{
-				ss << specularNr++; // Transfer GLuint to stream
+				ss << specularNr++;
 			}
 
 			number = ss.str();
-			// Now set the sampler to the correct texture unit
 			glUniform1i(glGetUniformLocation(shader.Program, (name + number).c_str()), i);
-			// And finally bind the texture
 			glBindTexture(GL_TEXTURE_2D, this->textures[i].id);
 		}
 
-		// Also set each mesh's shininess property to a default value (if you want you could extend this to another mesh property and possibly change this value)
+		// Brillo
 		glUniform1f(glGetUniformLocation(shader.Program, "material.shininess"), 16.0f);
 
-		// Draw mesh
+		// Dibujar malla
 		glBindVertexArray(this->VAO);
 		glDrawElements(GL_TRIANGLES, this->indices.size(), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 
-		// Always good practice to set everything back to defaults once configured.
+		// Limpiar texturas
 		for (GLuint i = 0; i < this->textures.size(); i++)
 		{
 			glActiveTexture(GL_TEXTURE0 + i);
@@ -104,37 +99,33 @@ public:
 	}
 
 private:
-	/*  Render data  */
+
+	// Buffers
 	GLuint VAO, VBO, EBO;
 
-	/*  Functions    */
-	// Initializes all the buffer objects/arrays
+	// Configurar malla
 	void setupMesh()
 	{
-		// Create buffers/arrays
 		glGenVertexArrays(1, &this->VAO);
 		glGenBuffers(1, &this->VBO);
 		glGenBuffers(1, &this->EBO);
 
 		glBindVertexArray(this->VAO);
-		// Load data into vertex buffers
 		glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
-		// A great thing about structs is that their memory layout is sequential for all its items.
-		// The effect is that we can simply pass a pointer to the struct and it translates perfectly to a glm::vec3/2 array which
-		// again translates to 3/2 floats which translates to a byte array.
 		glBufferData(GL_ARRAY_BUFFER, this->vertices.size() * sizeof(Vertex), &this->vertices[0], GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->indices.size() * sizeof(GLuint), &this->indices[0], GL_STATIC_DRAW);
 
-		// Set the vertex attribute pointers
-		// Vertex Positions
+		// Posición
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)0);
-		// Vertex Normals
+
+		// Normal
 		glEnableVertexAttribArray(1);
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)offsetof(Vertex, Normal));
-		// Vertex Texture Coords
+
+		// Coordenadas de textura
 		glEnableVertexAttribArray(2);
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)offsetof(Vertex, TexCoords));
 

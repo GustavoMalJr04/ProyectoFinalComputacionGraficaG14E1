@@ -1,36 +1,6 @@
 #pragma once
-// =====================================================================
-//  MariposaKeyframes.h
-//  Mariposa monarca animada por CUADROS CLAVE (keyframes)
-//  Proyecto Día de Muertos - Equipo 1 - Computación Gráfica, FI UNAM
-// ---------------------------------------------------------------------
-//  ¿QUÉ HACE ESTE ARCHIVO?
-//
-//  1) VUELO (cuadros clave de trayectoria)
-//     Cada cuadro clave guarda un frame de la mariposa:
-//        posición (X, Y, Z) + giro en Y + inclinación en X.
-//     Entre un cuadro clave y el siguiente se hace INTERPOLACIÓN LINEAL:
-//        incremento = (valorDestino - valorOrigen) / pasosEntreCuadros
-//     y en cada paso se suma ese incremento. Al llegar al último cuadro
-//     clave regresa al primero, así el vuelo se repite sin fin.
-//
-//  2) ALETEO (cuadros clave de las alas)
-//     De 2 a 8 poses (ángulo de las alas). También se interpolan,
-//     pero con muy pocos pasos, para que aletee rápido.
-//
-//  ARCHIVO DE CUADROS CLAVE (assets/models/mariposa/vuelo_*.txt)
-//     # comentario
-//     ala -20                    <- cuadro clave del aleteo
-//     ala 70
-//     -1.00 5.00 -27.00 180 0    <- cuadro clave del vuelo: x y z giroY inclinacionX
-//     
-//
-//  3) MODELADO JERÁRQUICO
-//     cuerpo (padre)  ->  ala izquierda y ala derecha (hijas)
-//     La matriz de cada ala = matriz del cuerpo × rotación de la bisagra,
-//     por eso las alas siguen al cuerpo a donde vaya.
-// =====================================================================
 
+// Librerías
 #include <cstdio>
 #include <cmath>
 #include <fstream>
@@ -44,59 +14,49 @@
 #include "Model.h"
 #include "Shader.h"
 
-// ---------------------------------------------------------------------
-//  Constantes
-// ---------------------------------------------------------------------
-const int   MAX_CUADROS_CLAVE      = 40;     // máximo de cuadros clave del vuelo
-const int   MAX_POSES_ALA          = 8;      // máximo de cuadros clave del aleteo
-const float DISTANCIA_FRENTE_CAMARA = 1.0f;  // a cuántos metros de la cámara se guarda un cuadro
+// Constantes
+const int   MAX_CUADROS_CLAVE      = 40;
+const int   MAX_POSES_ALA          = 8;
+const float DISTANCIA_FRENTE_CAMARA = 1.0f;
 
-// ---------------------------------------------------------------------
-//  Un cuadro clave del vuelo
-// ---------------------------------------------------------------------
+// Estructura cuadro clave
 struct CuadroClave
 {
-    float posicionX;      // metros
-    float posicionY;      // metros (altura)
-    float posicionZ;      // metros
-    float giroY;          // grados. 0 = mira hacia -Z, 90 = mira hacia -X
-    float inclinacionX;   // grados. + = nariz arriba, - = nariz abajo
+    float posicionX;
+    float posicionY;
+    float posicionZ;
+    float giroY;
+    float inclinacionX;
 };
 
-// ---------------------------------------------------------------------
-//  Una pose de las alas
-// ---------------------------------------------------------------------
+// Estructura pose de ala
 struct PoseAla
 {
-    float anguloGrados;   // + = ala levantada, - = ala bajada
+    float anguloGrados;
 };
 
-// =====================================================================
-//  Clase principal
-// =====================================================================
+// Mariposa por keyframes
 class MariposaKeyframes
 {
 public:
-    // ------------------- Parámetros -------------------
-    int   pasosEntreCuadros     = 120;    // pasos para ir de un cuadro clave al siguiente (120 = 2 s)
-    int   pasosEntreAleteos     = 5;      // pasos entre "abajo" y "arriba" (5 → unos 6 aleteos por segundo)
-    float pasosPorSegundo       = 60.0f;  // ritmo fijo de la animación (no depende de los FPS)
-    float escala                = 0.10f;  // tamaño final del modelo
-	float correccionGiroGrados = 0.0f;   // para ajustar el sentido de la mariposa en el modelo 3D
-    float bisagraX              = 0.0f;   // colocar la bisagra en  x = 0
-    glm::vec3 desplazamiento    = glm::vec3(0.0f); // se suma a la trayectoria (para que varias
-                                                   // mariposas compartan el mismo archivo sin encimarse)
 
-    // ------------------- Constructor -------------------
-    // Recibe los tres modelos ya cargados (se pueden compartir entre varias mariposas)
+    // Parámetros
+    int   pasosEntreCuadros     = 120;
+    int   pasosEntreAleteos     = 5;
+    float pasosPorSegundo       = 60.0f;
+    float escala                = 0.10f;
+	float correccionGiroGrados = 0.0f;
+    float bisagraX              = 0.0f;
+    glm::vec3 desplazamiento    = glm::vec3(0.0f);
+
+    // Constructor
     MariposaKeyframes(Model* modeloCuerpo, Model* modeloAlaIzquierda, Model* modeloAlaDerecha)
         : cuerpo(modeloCuerpo), alaIzquierda(modeloAlaIzquierda), alaDerecha(modeloAlaDerecha)
     {
         ConfigurarAleteo(-15.0f, 75.0f);
     }
 
-    // ------------------- Aleteo -------------------
-    // Ángulos (en grados) de las dos poses de las alas
+    // Configurar aleteo
     void ConfigurarAleteo(float anguloAbajo, float anguloArriba)
     {
         totalPosesAla = 0;
@@ -105,7 +65,7 @@ public:
         ReiniciarAleteo();
     }
 
-    // Agrega un cuadro clave del aleteo (ángulo de las alas en grados)
+    // Agregar pose de ala
     void AgregarPoseAla(float anguloGrados)
     {
         if (totalPosesAla >= MAX_POSES_ALA) return;
@@ -113,7 +73,7 @@ public:
         totalPosesAla++;
     }
 
-    // Empieza el aleteo desde la primera pose
+    // Reiniciar aleteo
     void ReiniciarAleteo()
     {
         if (totalPosesAla < 2) ConfigurarAleteoPorDefecto();
@@ -123,8 +83,7 @@ public:
         CalcularIncrementoAla();
     }
 
-    // ------------------- Cuadros clave -------------------
-    // Agrega un cuadro clave escrito en main.cpp
+    // Agregar cuadro clave
     void AgregarCuadroClave(float x, float y, float z, float giroY, float inclinacionX)
     {
         if (totalCuadrosClave >= MAX_CUADROS_CLAVE)
@@ -135,12 +94,10 @@ public:
         cuadrosClave[totalCuadrosClave] = { x, y, z, giroY, inclinacionX };
         totalCuadrosClave++;
 
-        // Con el primer cuadro clave la mariposa ya tiene dónde aparecer
         if (totalCuadrosClave == 1) ColocarEnCuadroClave(0);
     }
 
-    // Guarda un cuadro clave 1 m frente a la cámara, mirando a donde mira la cámara.
-    // Imprime en la consola la línea de C++ lista para copiar a main.cpp.
+    // Guardar cuadro desde la cámara
     void GuardarCuadroDesdeCamara(glm::vec3 posicionCamara, glm::vec3 frenteCamara)
     {
         glm::vec3 punto = posicionCamara + frenteCamara * DISTANCIA_FRENTE_CAMARA;
@@ -153,7 +110,7 @@ public:
                punto.x, punto.y, punto.z, giro, inclinacion, totalCuadrosClave - 1);
     }
 
-    // Borra todos los cuadros clave (para grabar unos nuevos)
+    // Borrar cuadros clave
     void BorrarCuadrosClave()
     {
         totalCuadrosClave = 0;
@@ -161,7 +118,7 @@ public:
         printf("[Mariposa] Cuadros clave borrados\n");
     }
 
-    // Imprime todos los cuadros clave actuales (para copiarlos a main.cpp)
+    // Imprimir cuadros clave
     void ImprimirCuadrosClave() const
     {
         printf("// ---- %d cuadros clave de la mariposa ----\n", totalCuadrosClave);
@@ -173,14 +130,11 @@ public:
         }
     }
 
+    // Consultas
     int  TotalCuadrosClave() const { return totalCuadrosClave; }
     bool EstaReproduciendo() const { return reproduciendo; }
 
-    // ------------------- Archivo de cuadros clave -------------------
-    // Formato: una línea por cuadro clave ->  x  y  z  giroY  inclinacionX
-    // Las líneas que empiezan con '#' son comentarios.
-
-    // Guarda los cuadros clave actuales en un archivo de texto
+    // Guardar en archivo
     bool GuardarEnArchivo(const char* ruta) const
     {
         std::ofstream archivo(ruta);
@@ -204,7 +158,7 @@ public:
         return true;
     }
 
-    // Borra los cuadros actuales y carga los del archivo. Si estaba volando, sigue volando.
+    // Cargar desde archivo
     bool CargarDesdeArchivo(const char* ruta)
     {
         std::ifstream archivo(ruta);
@@ -224,20 +178,20 @@ public:
             if (linea.empty() || linea[0] == '#' || linea[0] == '\r') continue;
             std::istringstream datos(linea);
 
-            if (linea.compare(0, 3, "ala") == 0)          // cuadro clave del aleteo
+            if (linea.compare(0, 3, "ala") == 0)
             {
                 std::string etiqueta;
                 float angulo;
                 if (datos >> etiqueta >> angulo)
                 {
-                    if (posesLeidas == 0) totalPosesAla = 0;   // el archivo reemplaza las poses por defecto
+                    if (posesLeidas == 0) totalPosesAla = 0;
                     AgregarPoseAla(angulo);
                     posesLeidas++;
                 }
                 continue;
             }
 
-            float x, y, z, giro, inclinacion;               // cuadro clave del vuelo
+            float x, y, z, giro, inclinacion;
             if (datos >> x >> y >> z >> giro >> inclinacion)
                 AgregarCuadroClave(x, y, z, giro, inclinacion);
         }
@@ -248,8 +202,7 @@ public:
         return totalCuadrosClave >= 2;
     }
 
-    // Arranca el vuelo desde un cuadro clave cualquiera (sirve para que
-    // varias mariposas con la misma ruta vayan repartidas y no juntas)
+    // Reproducir desde un cuadro
     void ReproducirDesde(int cuadroInicial)
     {
         if (totalCuadrosClave < 2) return;
@@ -260,8 +213,7 @@ public:
         reproduciendo = true;
     }
 
-    // ------------------- Reproducción -------------------
-    // Inicia la animación desde el primer cuadro clave, o la detiene si ya estaba corriendo
+    // Reproducir o detener
     void ReproducirODetener()
     {
         if (reproduciendo)
@@ -278,18 +230,25 @@ public:
         cuadroActual = 0;
         pasoActual   = 0;
         acumuladorTiempo = 0.0f;
-        CalcularIncrementos();          // también coloca la mariposa en el cuadro 0
+        CalcularIncrementos();
         reproduciendo = true;
         printf("[Mariposa] Animacion iniciada con %d cuadros clave\n", totalCuadrosClave);
     }
 
-    // Llamar UNA vez por frame, con el deltaTime del ciclo principal
+    // Pausar o reanudar
+    void PausarOReanudar()
+    {
+        if (totalCuadrosClave < 2) return;
+        reproduciendo = !reproduciendo;
+    }
+
+    // Actualizar
     void Actualizar(float deltaTime)
     {
         if (!reproduciendo) return;
 
         acumuladorTiempo += deltaTime;
-        if (acumuladorTiempo > 0.25f) acumuladorTiempo = 0.25f;  // si el programa se trabó, no dar un salto enorme
+        if (acumuladorTiempo > 0.25f) acumuladorTiempo = 0.25f;
 
         const float duracionPaso = 1.0f / pasosPorSegundo;
         while (acumuladorTiempo >= duracionPaso)
@@ -299,25 +258,20 @@ public:
         }
     }
 
-    // ------------------- Dibujo -------------------
-    // Llamar con el shader de iluminación activo (lightingShader.Use() ya hecho),
-    // DESPUÉS de los objetos opacos y ANTES de las llamas.
+    // Dibujar
     void Dibujar(Shader& shader)
     {
-        if (totalCuadrosClave == 0) return;   // todavía no tiene posición
+        if (totalCuadrosClave == 0) return;
 
         GLuint programa   = shader.Program;
         GLint  ubicModelo = glGetUniformLocation(programa, "model");
 
-        // Las alas son PNG con transparencia: se descartan los píxeles invisibles
-        // y se desactiva el culling para ver el ala por arriba y por abajo.
         glUniform1i(glGetUniformLocation(programa, "transparency"), 1);
         glUniform1f(glGetUniformLocation(programa, "specularStrength"), 0.05f);
         GLboolean cullingEstabaActivo = glIsEnabled(GL_CULL_FACE);
         glDisable(GL_CULL_FACE);
 
-        // ---------- CUERPO (padre) ----------
-        // Orden de lectura: primero escala, luego inclina, luego gira, al final traslada.
+        // Cuerpo
         glm::mat4 matrizCuerpo(1.0f);
         matrizCuerpo = glm::translate(matrizCuerpo, glm::vec3(posicionX, posicionY, posicionZ) + desplazamiento);
         matrizCuerpo = glm::rotate(matrizCuerpo, glm::radians(giroY + correccionGiroGrados), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -329,8 +283,7 @@ public:
 
         float anguloAla = glm::radians(anguloAlaActual);
 
-        // ---------- ALA DERECHA (hija, x > 0) ----------
-        // Ángulo positivo alrededor de Z levanta las puntas que están en x > 0
+        // Ala derecha
         glm::mat4 matrizAlaDerecha = matrizCuerpo;
         matrizAlaDerecha = glm::translate(matrizAlaDerecha, glm::vec3(bisagraX, 0.0f, 0.0f));
         matrizAlaDerecha = glm::rotate(matrizAlaDerecha, anguloAla, glm::vec3(0.0f, 0.0f, 1.0f));
@@ -338,8 +291,7 @@ public:
         glUniformMatrix4fv(ubicModelo, 1, GL_FALSE, glm::value_ptr(matrizAlaDerecha));
         alaDerecha->Draw(shader);
 
-        // ---------- ALA IZQUIERDA (hija, x < 0) ----------
-        // Para levantar puntas que están en x < 0 el ángulo va con signo contrario
+        // Ala izquierda
         glm::mat4 matrizAlaIzquierda = matrizCuerpo;
         matrizAlaIzquierda = glm::translate(matrizAlaIzquierda, glm::vec3(-bisagraX, 0.0f, 0.0f));
         matrizAlaIzquierda = glm::rotate(matrizAlaIzquierda, -anguloAla, glm::vec3(0.0f, 0.0f, 1.0f));
@@ -347,35 +299,36 @@ public:
         glUniformMatrix4fv(ubicModelo, 1, GL_FALSE, glm::value_ptr(matrizAlaIzquierda));
         alaIzquierda->Draw(shader);
 
-        // Dejar el estado como estaba para el resto de la escena
+        // Restaurar estado
         if (cullingEstabaActivo) glEnable(GL_CULL_FACE);
         glUniform1i(glGetUniformLocation(programa, "transparency"), 0);
         glUniform1f(glGetUniformLocation(programa, "specularStrength"), 0.15f);
     }
 
 private:
-    // ------------------- Modelos -------------------
+
+    // Modelos
     Model* cuerpo;
     Model* alaIzquierda;
     Model* alaDerecha;
 
-    // ------------------- Cuadros clave del vuelo -------------------
+    // Cuadros clave del vuelo
     CuadroClave cuadrosClave[MAX_CUADROS_CLAVE];
     int  totalCuadrosClave = 0;
-    int  cuadroActual      = 0;     // de cuál cuadro clave va saliendo
-    int  pasoActual        = 0;     // cuántos pasos lleva en el tramo actual
+    int  cuadroActual      = 0;
+    int  pasoActual        = 0;
     bool reproduciendo     = false;
     float acumuladorTiempo = 0.0f;
 
-    // Estado actual (lo que se dibuja en pantalla)
+    // Estado actual
     float posicionX = 0.0f, posicionY = 0.0f, posicionZ = 0.0f;
     float giroY = 0.0f, inclinacionX = 0.0f;
 
-    // Cuánto cambia cada valor en un paso
+    // Incrementos
     float incrementoX = 0.0f, incrementoY = 0.0f, incrementoZ = 0.0f;
     float incrementoGiroY = 0.0f, incrementoInclinacionX = 0.0f;
 
-    // ------------------- Cuadros clave de las alas -------------------
+    // Cuadros clave de las alas
     PoseAla posesAla[MAX_POSES_ALA];
     int   totalPosesAla     = 0;
     int   poseAlaActual     = 0;
@@ -383,10 +336,7 @@ private:
     float anguloAlaActual   = 0.0f;
     float incrementoAla     = 0.0f;
 
-    // ------------------- Funciones internas -------------------
-
-    // Diferencia de ángulos por el camino más corto.
-    // Ejemplo: de 170° a -170° son 20°, no -340° (si no, daría una vuelta completa).
+    // Diferencia de ángulos
     static float DiferenciaAnguloCorta(float desde, float hasta)
     {
         float diferencia = hasta - desde;
@@ -395,7 +345,7 @@ private:
         return diferencia;
     }
 
-    // Pone la mariposa exactamente en el cuadro clave 'indice'
+    // Colocar en cuadro clave
     void ColocarEnCuadroClave(int indice)
     {
         posicionX    = cuadrosClave[indice].posicionX;
@@ -405,12 +355,11 @@ private:
         inclinacionX = cuadrosClave[indice].inclinacionX;
     }
 
-    // INTERPOLACIÓN: calcula cuánto avanzar en cada paso para ir
-    // del cuadro clave actual al siguiente.
+    // Interpolación
     void CalcularIncrementos()
     {
-        int siguiente = (cuadroActual + 1) % totalCuadrosClave;   // después del último, el 0
-        ColocarEnCuadroClave(cuadroActual);                       // así no se acumula error
+        int siguiente = (cuadroActual + 1) % totalCuadrosClave;
+        ColocarEnCuadroClave(cuadroActual);
 
         const CuadroClave& destino = cuadrosClave[siguiente];
         incrementoX            = (destino.posicionX - posicionX) / pasosEntreCuadros;
@@ -420,6 +369,7 @@ private:
         incrementoInclinacionX = (destino.inclinacionX - inclinacionX) / pasosEntreCuadros;
     }
 
+    // Aleteo por defecto
     void ConfigurarAleteoPorDefecto()
     {
         totalPosesAla = 0;
@@ -427,6 +377,7 @@ private:
         AgregarPoseAla(75.0f);
     }
 
+    // Incremento del ala
     void CalcularIncrementoAla()
     {
         int siguientePose = (poseAlaActual + 1) % totalPosesAla;
@@ -434,13 +385,12 @@ private:
                         / pasosEntreAleteos;
     }
 
-    // Un paso de la animación (se llama pasosPorSegundo veces por segundo)
+    // Avanzar un paso
     void AvanzarUnPaso()
     {
-        // ---------- Vuelo ----------
+        // Vuelo
         if (pasoActual >= pasosEntreCuadros)
         {
-            // Terminó el tramo: el siguiente cuadro clave pasa a ser el de origen
             cuadroActual = (cuadroActual + 1) % totalCuadrosClave;
             pasoActual = 0;
             CalcularIncrementos();
@@ -455,7 +405,7 @@ private:
             pasoActual++;
         }
 
-        // ---------- Aleteo ----------
+        // Aleteo
         if (pasoAlaActual >= pasosEntreAleteos)
         {
             poseAlaActual   = (poseAlaActual + 1) % totalPosesAla;
