@@ -65,19 +65,10 @@ bool mouseCapturado = false;
 FichasCulturales fichas;
 bool firstMouse = true;
 
-// Luz de prueba
-glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
-bool active;
+// Plano lejano de la proyección (el escenario mide ~130 m)
+const float PLANO_LEJANO = 200.0f;
 
-// Luz de colores
-glm::vec3 pointLightPositions[] = {
-	glm::vec3(-20.0f, 3.2f, 4.5f),
-	glm::vec3(0.0f,0.0f, 0.0f),
-	glm::vec3(0.0f,0.0f,  0.0f),
-	glm::vec3(0.0f,0.0f, 0.0f)
-};
-
-// Vértices del cubo
+// Vértices del cubo (se usa para los postes de los faroles)
 float vertices[] = {
 	 -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 		0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -206,9 +197,6 @@ glm::vec3 posCruces[2] = {
 	glm::vec3(37.62f, 0.40f, 12.95f)
 };
 
-// Luz de colores
-glm::vec3 Light1 = glm::vec3(0);
-
 // Animación del esqueleto
 float skelWalkCycle = 0.0f;
 bool isWalking = false;
@@ -244,29 +232,50 @@ struct BoundingBox {
 
 // Paredes invisibles
 std::vector<BoundingBox> invisibleWalls = {
-	{  -120.0f, 120.0f, 80.0f, 85.0f },
-	{  -120.0f, 120.0f, -55.0f, -49.8f },
-	{	-50.0f, -49.75f, -60.0f, 50.0f },
-	{	49.75f, 50.0f, -60.0f, 50.0f },
-	{  -65.0f, -60.0f, -80.0f, 80.0f },
-	{  60.0f, 65.0f, -80.0f, 80.0f },
-	{  10.0f, 15.0f,  5.0f,  40.0f },
-	{  10.0f, 15.0f, -60.0f,  -4.75f },
-	{ -23.3f, -16.7f, -1.25f,  3.1f }
+	{ -120.0f, 120.0f,  80.0f,  85.0f },	// límite de la calle (lado de los árboles)
+	{ -120.0f, 120.0f, -55.0f, -49.8f },	// barda norte (detrás de la iglesia y del panteón)
+	{  -65.0f, -60.0f, -80.0f,  80.0f },	// límite oeste del mapa
+	{   60.0f,  65.0f, -80.0f,  80.0f },	// límite este del mapa
+	{  -50.0f, -49.75f, -60.0f, 50.0f },	// barda oeste del atrio
+	{   49.75f, 50.0f, -60.0f,  50.0f },	// barda este del panteón
+	{   10.0f,  15.0f,   5.0f,  40.0f },	// barda entre atrio y panteón (sur del corredor)
+	{   10.0f,  15.0f, -60.0f, -4.75f },	// barda entre atrio y panteón (norte del corredor)
+	{  -60.0f, -22.9f,  49.90f, 50.00f },	// barda sur 1 (oeste del arco)
+	{  -17.0f,  30.35f, 49.90f, 50.00f },	// barda sur 2 (entre el arco y el portón)
+	{   34.4f,  60.0f,  49.90f, 50.00f },	// barda sur 3 (este del portón)
+	{  -33.0f,  -6.0f, -45.0f, -14.0f },	// iglesia
+	{  -23.3f, -16.7f,  -1.25f,  3.1f }	// ofrenda
 };
+
+// Hueco del portón del panteón: solo bloquea cuando el portón está cerrado
+const BoundingBox HUECO_PORTON = { 30.35f, 34.4f, 49.90f, 50.00f };
+const float ANGULO_PASO_PORTON = 60.0f;   // a partir de este ángulo ya se puede pasar
+
+// Revisa si un círculo de radio r en pos toca una caja
+bool TocaCaja(const glm::vec3& pos, const BoundingBox& caja, float r)
+{
+	return pos.x + r >= caja.minX && pos.x - r <= caja.maxX &&
+		pos.z + r >= caja.minZ && pos.z - r <= caja.maxZ;
+}
 
 // Colisión
 bool CheckCollision(glm::vec3 pos)
 {
-	float skeletonRadius = 0.5f;
+	const float skeletonRadius = 0.5f;
 
 	for (const auto& wall : invisibleWalls)
 	{
-		if (pos.x + skeletonRadius >= wall.minX && pos.x - skeletonRadius <= wall.maxX &&
-			pos.z + skeletonRadius >= wall.minZ && pos.z - skeletonRadius <= wall.maxZ)
-		{
+		if (TocaCaja(pos, wall, skeletonRadius))
 			return true;
-		}
+	}
+
+	// Portón cerrado. Si el esqueleto ya estaba en el hueco cuando se cerró,
+	// se le deja salir para que no se quede atorado.
+	if (anguloPorton < ANGULO_PASO_PORTON &&
+		TocaCaja(pos, HUECO_PORTON, skeletonRadius) &&
+		!TocaCaja(skeletonPos, HUECO_PORTON, skeletonRadius))
+	{
+		return true;
 	}
 	return false;
 }
@@ -306,7 +315,6 @@ int main()
 
 	// Shaders
 	Shader lightingShader("Shader/lighting.vs", "Shader/lighting.frag");
-	Shader lampShader("Shader/lamp.vs", "Shader/lamp.frag");
 	Shader SkyBoxshader("Shader/skybox.vs", "Shader/skybox.frag");
 	Shader humoShader("Shader/humo.vs", "Shader/humo.frag");
 
@@ -331,14 +339,10 @@ int main()
 	Model arcoEntrada((char*)"assets/models/edificacion/atrio_arco_entrada.obj");
 	Model corredor((char*)"assets/models/edificacion/corredor_panteon.obj");
 	Model cruzMadera1((char*)"assets/models/edificacion/cruz_pequena.obj");
-	Model cruzMadera2((char*)"assets/models/edificacion/cruz_diminuta.obj");
-	Model cruzPanteon((char*)"assets/models/edificacion/cruz_panteon.obj");
-	Model farol1((char*)"assets/models/edificacion/farol1.obj");
 	Model iglesia((char*)"assets/models/edificacion/iglesia.obj");
 	Model lapida1((char*)"assets/models/edificacion/lapida.obj");
 	Model murosCementerio((char*)"assets/models/edificacion/barda_panteon.obj");
 	Model paredesPatio((char*)"assets/models/edificacion/atrio_barda.obj");
-	Model petaloCempasuchil((char*)"assets/models/edificacion/petaloCempasuchil.obj");
 	Model pisoAdoquin((char*)"assets/models/edificacion/atrio_explanada.obj");
 	Model pisoCementerio((char*)"assets/models/edificacion/piso_panteon.obj");
 	Model portonDerecha((char*)"assets/models/edificacion/porton_der.obj");
@@ -436,6 +440,10 @@ int main()
 	for (const Farol& f : faroles)
 		invisibleWalls.push_back({ f.pos.x - 0.25f, f.pos.x + 0.25f, f.pos.z - 0.25f, f.pos.z + 0.25f });
 
+	// Colisión de las tumbas (montículo de tierra con su lápida o cruz)
+	for (const Tumba& t : tumbas)
+		invisibleWalls.push_back({ t.x0, t.x1, t.z0, t.z1 });
+
 	// Cubo
 	GLuint VBO, VAO;
 	glGenVertexArrays(1, &VAO);
@@ -485,6 +493,16 @@ int main()
 	// Iluminación de noche
 	GLuint mapaLuzVelas = configurarNoche(lightingShader.Program);
 
+	// El shader tiene una luz puntual que no se usa: se deja apagada.
+	// constant = 1 evita dividir entre cero en la atenuación.
+	glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].position"), 0.0f, 0.0f, 0.0f);
+	glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].ambient"), 0.0f, 0.0f, 0.0f);
+	glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].diffuse"), 0.0f, 0.0f, 0.0f);
+	glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].specular"), 0.0f, 0.0f, 0.0f);
+	glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].constant"), 1.0f);
+	glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].linear"), 0.0f);
+	glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].quadratic"), 0.0f);
+
 	// Música
 	mciSendString(TEXT("open \"assets/audio/lloronaCancion.mp3\" type mpegvideo alias musicaFondo"), NULL, 0, NULL);
 	mciSendString(TEXT("play musicaFondo repeat"), NULL, 0, NULL);
@@ -508,7 +526,7 @@ int main()
 
 		// Proyección con el tamaño actual de la ventana
 		float aspecto = (SCREEN_HEIGHT > 0) ? (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT : 1.0f;
-		glm::mat4 projection = glm::perspective(camera.GetZoom(), aspecto, 0.1f, 100.0f);
+		glm::mat4 projection = glm::perspective(camera.GetZoom(), aspecto, 0.1f, PLANO_LEJANO);
 
 		glClearColor(NIEBLA_COLOR.x, NIEBLA_COLOR.y, NIEBLA_COLOR.z, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -527,20 +545,6 @@ int main()
 
 		// Luna, velas y linterna
 		actualizarLuces(lightingShader.Program, camera.GetPosition(), camera.GetFront(), currentFrame, mapaLuzVelas);
-
-		// Luz de colores
-		glm::vec3 lightColor;
-		lightColor.x = abs(sin(glfwGetTime() * Light1.x));
-		lightColor.y = abs(sin(glfwGetTime() * Light1.y));
-		lightColor.z = sin(glfwGetTime() * Light1.z);
-
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].position"), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].ambient"), lightColor.x, lightColor.y, lightColor.z);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].diffuse"), lightColor.x, lightColor.y, lightColor.z);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].specular"), 1.0f, 0.2f, 0.2f);
-		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].constant"), 1.0f);
-		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].linear"), 0.045f);
-		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].quadratic"), 0.075f);
 
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "material.shininess"), 5.0f);
 
@@ -795,27 +799,6 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		skeleton.Draw(lightingShader);
 
-		// Cubo de la luz de prueba
-		lampShader.Use();
-		modelLoc = glGetUniformLocation(lampShader.Program, "model");
-		viewLoc = glGetUniformLocation(lampShader.Program, "view");
-		projLoc = glGetUniformLocation(lampShader.Program, "projection");
-
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-		const bool DIBUJAR_LAMPARA = false;
-		if (DIBUJAR_LAMPARA)
-		{
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, pointLightPositions[0]);
-			model = glm::scale(model, glm::vec3(0.2f));
-			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-			glBindVertexArray(VAO);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-			glBindVertexArray(0);
-		}
-
 		// Skybox
 		glDepthFunc(GL_LEQUAL);
 		SkyBoxshader.Use();
@@ -845,6 +828,8 @@ int main()
 	}
 
 	// Liberar recursos
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
 	glDeleteVertexArrays(1, &skyboxVAO);
 	glDeleteBuffers(1, &skyboxVBO);
 	glDeleteBuffers(1, &skyboxEBO);
@@ -949,20 +934,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 		else if (action == GLFW_RELEASE)
 		{
 			keys[key] = false;
-		}
-	}
-
-	// Luz de colores
-	if (key == GLFW_KEY_P && action == GLFW_PRESS)
-	{
-		active = !active;
-		if (active)
-		{
-			Light1 = glm::vec3(0.2f, 0.8f, 1.0f);
-		}
-		else
-		{
-			Light1 = glm::vec3(0);
 		}
 	}
 
